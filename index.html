@@ -1,0 +1,1244 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FOCUS CAM // NEURAL MONITOR v1.0</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --cyan: #00ffff;
+    --magenta: #ff00ff;
+    --orange: #ff3c00;
+    --yellow: #ffdd00;
+    --bg: #0a0a0f;
+    --bg2: #0d0d1a;
+    --bg3: #111122;
+    --text: #e0e0ff;
+    --grid: #1a1a2e;
+    --gray: #444466;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Share Tech Mono', monospace;
+    min-height: 100vh;
+    overflow-x: hidden;
+    position: relative;
+  }
+
+  /* スキャンライン */
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.08) 2px,
+      rgba(0,0,0,0.08) 4px
+    );
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  /* グリッド背景 */
+  body::after {
+    content: '';
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-image:
+      linear-gradient(var(--grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.4;
+  }
+
+  .app-wrapper {
+    position: relative;
+    z-index: 1;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 16px;
+  }
+
+  /* ヘッダー */
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0 16px;
+    border-bottom: 1px solid var(--cyan);
+    margin-bottom: 16px;
+  }
+
+  .header-title {
+    font-family: 'Orbitron', monospace;
+    font-size: 22px;
+    font-weight: 900;
+    color: var(--cyan);
+    text-shadow: 0 0 20px var(--cyan), 0 0 40px rgba(0,255,255,0.3);
+    letter-spacing: 4px;
+  }
+
+  .header-title span {
+    color: var(--magenta);
+    text-shadow: 0 0 20px var(--magenta);
+  }
+
+  .header-right {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+
+  .sys-time {
+    font-size: 12px;
+    color: var(--gray);
+    letter-spacing: 2px;
+  }
+
+  .btn {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 2px;
+    padding: 6px 14px;
+    background: transparent;
+    border: 1px solid var(--cyan);
+    color: var(--cyan);
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .btn::before {
+    content: '';
+    position: absolute;
+    top: 0; left: -100%;
+    width: 100%; height: 100%;
+    background: rgba(0,255,255,0.1);
+    transition: left 0.2s;
+  }
+
+  .btn:hover::before { left: 0; }
+  .btn:hover { box-shadow: 0 0 12px var(--cyan); }
+
+  .btn-csv { border-color: var(--magenta); color: var(--magenta); }
+  .btn-csv::before { background: rgba(255,0,255,0.1); }
+  .btn-csv:hover { box-shadow: 0 0 12px var(--magenta); }
+
+  .btn-view { min-width: 160px; }
+
+  /* メインレイアウト */
+  .main-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto auto;
+    gap: 12px;
+  }
+
+  /* パネル共通 */
+  .panel {
+    background: var(--bg2);
+    border: 1px solid var(--cyan);
+    position: relative;
+    padding: 16px;
+  }
+
+  .panel::before,
+  .panel::after {
+    content: '';
+    position: absolute;
+    width: 10px; height: 10px;
+  }
+
+  .panel::before {
+    top: -1px; left: -1px;
+    border-top: 2px solid var(--magenta);
+    border-left: 2px solid var(--magenta);
+  }
+
+  .panel::after {
+    bottom: -1px; right: -1px;
+    border-bottom: 2px solid var(--magenta);
+    border-right: 2px solid var(--magenta);
+  }
+
+  .panel-label {
+    font-family: 'Orbitron', monospace;
+    font-size: 9px;
+    letter-spacing: 3px;
+    color: var(--gray);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .panel-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--grid);
+  }
+
+  /* カメラパネル */
+  .panel-camera {
+    grid-row: 1 / 2;
+    grid-column: 1 / 2;
+    padding: 12px;
+  }
+
+  .camera-container {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 4/3;
+    background: #000;
+    overflow: hidden;
+  }
+
+  .camera-container.private-mode {
+    background:
+      radial-gradient(circle at 50% 50%, rgba(0,255,255,0.08), transparent 40%),
+      linear-gradient(180deg, rgba(17,17,34,0.95), rgba(10,10,15,1));
+  }
+
+  #inputVideo {
+    position: absolute;
+    width: 100%; height: 100%;
+    object-fit: cover;
+    opacity: 0;
+  }
+
+  #outputCanvas {
+    position: absolute;
+    width: 100%; height: 100%;
+    object-fit: cover;
+  }
+
+  .camera-overlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    pointer-events: none;
+  }
+
+  /* 四隅のコーナー */
+  .corner {
+    position: absolute;
+    width: 20px; height: 20px;
+  }
+  .corner-tl { top: 8px; left: 8px; border-top: 2px solid var(--cyan); border-left: 2px solid var(--cyan); }
+  .corner-tr { top: 8px; right: 8px; border-top: 2px solid var(--cyan); border-right: 2px solid var(--cyan); }
+  .corner-bl { bottom: 8px; left: 8px; border-bottom: 2px solid var(--cyan); border-left: 2px solid var(--cyan); }
+  .corner-br { bottom: 8px; right: 8px; border-bottom: 2px solid var(--cyan); border-right: 2px solid var(--cyan); }
+
+  .camera-status-bar {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    background: rgba(0,0,0,0.7);
+    padding: 4px 12px;
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    letter-spacing: 1px;
+  }
+
+  #camStatus { color: var(--cyan); }
+  #camFps { color: var(--gray); }
+
+  /* スコアパネル */
+  .panel-score {
+    grid-row: 1 / 2;
+    grid-column: 2 / 3;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .score-display {
+    text-align: center;
+    padding: 10px 0;
+  }
+
+  .score-number {
+    font-family: 'Orbitron', monospace;
+    font-size: 88px;
+    font-weight: 900;
+    line-height: 1;
+    color: var(--cyan);
+    text-shadow: 0 0 30px var(--cyan), 0 0 60px rgba(0,255,255,0.4);
+    transition: color 0.5s, text-shadow 0.5s;
+  }
+
+  .score-number.medium {
+    color: var(--yellow);
+    text-shadow: 0 0 30px var(--yellow), 0 0 60px rgba(255,221,0,0.4);
+  }
+
+  .score-number.low {
+    color: var(--orange);
+    text-shadow: 0 0 30px var(--orange), 0 0 60px rgba(255,60,0,0.4);
+  }
+
+  .score-number.away {
+    color: var(--gray);
+    text-shadow: none;
+  }
+
+  .state-badge {
+    display: inline-block;
+    font-family: 'Orbitron', monospace;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 4px;
+    padding: 4px 16px;
+    border: 1px solid var(--cyan);
+    color: var(--cyan);
+    text-shadow: 0 0 10px var(--cyan);
+    box-shadow: 0 0 10px rgba(0,255,255,0.2), inset 0 0 10px rgba(0,255,255,0.05);
+    margin-top: 8px;
+    transition: all 0.5s;
+  }
+
+  .state-badge.medium {
+    border-color: var(--yellow); color: var(--yellow);
+    text-shadow: 0 0 10px var(--yellow);
+    box-shadow: 0 0 10px rgba(255,221,0,0.2), inset 0 0 10px rgba(255,221,0,0.05);
+  }
+
+  .state-badge.low {
+    border-color: var(--orange); color: var(--orange);
+    text-shadow: 0 0 10px var(--orange);
+    box-shadow: 0 0 10px rgba(255,60,0,0.2), inset 0 0 10px rgba(255,60,0,0.05);
+  }
+
+  .state-badge.away {
+    border-color: var(--gray); color: var(--gray);
+    text-shadow: none; box-shadow: none;
+  }
+
+  /* 理由表示 */
+  .reason-text {
+    font-size: 11px;
+    letter-spacing: 1px;
+    color: var(--orange);
+    text-align: center;
+    min-height: 16px;
+    text-shadow: 0 0 8px var(--orange);
+  }
+
+  /* 内訳バー */
+  .metrics-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .metric-row {
+    display: grid;
+    grid-template-columns: 120px 1fr 40px;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+  }
+
+  .metric-label {
+    color: var(--gray);
+    letter-spacing: 1px;
+    font-size: 10px;
+  }
+
+  .metric-bar-bg {
+    height: 6px;
+    background: var(--bg3);
+    border: 1px solid var(--grid);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .metric-bar-fill {
+    position: absolute;
+    top: 0; left: 0; bottom: 0;
+    background: var(--cyan);
+    box-shadow: 0 0 6px var(--cyan);
+    transition: width 0.5s ease;
+  }
+
+  .metric-val {
+    color: var(--cyan);
+    text-align: right;
+    font-size: 11px;
+  }
+
+  /* グラフパネル */
+  .panel-graph {
+    grid-column: 1 / 3;
+  }
+
+  .chart-wrapper {
+    height: 160px;
+    position: relative;
+  }
+
+  /* ステータスバー */
+  .status-bar {
+    margin-top: 12px;
+    padding: 8px 12px;
+    background: var(--bg3);
+    border: 1px solid var(--grid);
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    letter-spacing: 1px;
+    color: var(--gray);
+  }
+
+  .status-item { display: flex; gap: 6px; align-items: center; }
+  .status-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--gray);
+    animation: pulse 2s infinite;
+  }
+  .status-dot.active { background: var(--cyan); box-shadow: 0 0 6px var(--cyan); }
+  .status-dot.warn { background: var(--orange); box-shadow: 0 0 6px var(--orange); }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  /* 同意モーダル */
+  .modal-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.9);
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .modal {
+    background: var(--bg2);
+    border: 1px solid var(--cyan);
+    max-width: 520px;
+    width: 90%;
+    padding: 32px;
+    position: relative;
+    box-shadow: 0 0 40px rgba(0,255,255,0.15);
+  }
+
+  .modal::before {
+    content: '';
+    position: absolute;
+    top: -1px; left: -1px;
+    width: 16px; height: 16px;
+    border-top: 2px solid var(--magenta);
+    border-left: 2px solid var(--magenta);
+  }
+
+  .modal::after {
+    content: '';
+    position: absolute;
+    bottom: -1px; right: -1px;
+    width: 16px; height: 16px;
+    border-bottom: 2px solid var(--magenta);
+    border-right: 2px solid var(--magenta);
+  }
+
+  .modal-title {
+    font-family: 'Orbitron', monospace;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--cyan);
+    text-shadow: 0 0 16px var(--cyan);
+    letter-spacing: 3px;
+    margin-bottom: 20px;
+  }
+
+  .modal-body {
+    font-size: 12px;
+    line-height: 1.8;
+    color: var(--text);
+    margin-bottom: 24px;
+  }
+
+  .modal-body ul {
+    margin: 10px 0 10px 16px;
+    color: var(--gray);
+  }
+
+  .modal-body ul li { margin-bottom: 4px; }
+
+  .modal-warning {
+    font-size: 11px;
+    color: var(--orange);
+    border-left: 2px solid var(--orange);
+    padding-left: 10px;
+    margin-bottom: 20px;
+    line-height: 1.6;
+  }
+
+  .modal-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+  }
+
+  .btn-agree {
+    font-family: 'Orbitron', monospace;
+    font-size: 12px;
+    letter-spacing: 3px;
+    padding: 10px 24px;
+    background: transparent;
+    border: 1px solid var(--cyan);
+    color: var(--cyan);
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: all 0.2s;
+  }
+
+  .btn-agree:hover {
+    background: rgba(0,255,255,0.1);
+    box-shadow: 0 0 16px var(--cyan);
+  }
+
+  /* フラッシュ通知 */
+  .flash {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 10px 18px;
+    background: var(--bg2);
+    border: 1px solid var(--orange);
+    color: var(--orange);
+    font-size: 12px;
+    letter-spacing: 1px;
+    z-index: 5000;
+    opacity: 0;
+    transform: translateX(20px);
+    transition: all 0.3s;
+    box-shadow: 0 0 12px rgba(255,60,0,0.3);
+  }
+
+  .flash.show { opacity: 1; transform: translateX(0); }
+
+  /* レスポンシブ */
+  @media (max-width: 700px) {
+    .main-grid { grid-template-columns: 1fr; }
+    .panel-graph { grid-column: 1; }
+    .score-number { font-size: 64px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- 同意モーダル -->
+<div class="modal-overlay" id="consentModal">
+  <div class="modal">
+    <div class="modal-title">// SYSTEM INITIALIZATION</div>
+    <div class="modal-body">
+      <p>本システムはWebカメラ映像から集中度を推定します。</p>
+      <ul>
+        <li>顔ランドマーク・頭部姿勢・視線方向を使用</li>
+        <li>映像・データは端末内でのみ処理</li>
+        <li>外部サーバーへの送信は一切行わない</li>
+        <li>生画像の保存は行わない</li>
+      </ul>
+    </div>
+    <div class="modal-warning">
+      ⚠ 本システムの出力は行動的代理指標です。<br>
+      認知的集中の直接測定値ではありません。<br>
+      人事評価・監視用途への使用を禁止します。
+    </div>
+    <div class="modal-actions">
+      <button class="btn-agree" id="btnAgree">AUTHORIZE &amp; START</button>
+    </div>
+  </div>
+</div>
+
+<!-- フラッシュ通知 -->
+<div class="flash" id="flash"></div>
+
+<div class="app-wrapper">
+  <!-- ヘッダー -->
+  <header class="header">
+    <div class="header-title">FOCUS<span>CAM</span> // NEURAL MONITOR</div>
+    <div class="header-right">
+      <span class="sys-time" id="sysTime">--:--:--</span>
+      <button class="btn btn-view" id="btnDisplay">DISPLAY: EYE DOT</button>
+      <button class="btn btn-csv" id="btnCsv">⬇ CSV</button>
+    </div>
+  </header>
+
+  <!-- メイングリッド -->
+  <div class="main-grid">
+
+    <!-- カメラパネル -->
+    <div class="panel panel-camera">
+      <div class="panel-label">VISUAL INPUT // FACE TRACKING</div>
+      <div class="camera-container">
+        <video id="inputVideo" playsinline></video>
+        <canvas id="outputCanvas"></canvas>
+        <div class="camera-overlay">
+          <div class="corner corner-tl"></div>
+          <div class="corner corner-tr"></div>
+          <div class="corner corner-bl"></div>
+          <div class="corner corner-br"></div>
+        </div>
+        <div class="camera-status-bar">
+          <span id="camStatus">INITIALIZING...</span>
+          <span id="camFps">-- FPS</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- スコアパネル -->
+    <div class="panel panel-score">
+      <div class="panel-label">CONCENTRATION INDEX</div>
+
+      <div class="score-display">
+        <div class="score-number high" id="scoreNumber">--</div>
+        <div class="state-badge high" id="stateBadge">LOADING</div>
+      </div>
+
+      <div class="reason-text" id="reasonText"></div>
+
+      <div class="metrics-grid">
+        <div class="metric-row">
+          <span class="metric-label">GAZE ON SCREEN</span>
+          <div class="metric-bar-bg"><div class="metric-bar-fill" id="barGaze" style="width:0%"></div></div>
+          <span class="metric-val" id="valGaze">--%</span>
+        </div>
+        <div class="metric-row">
+          <span class="metric-label">HEAD STABILITY</span>
+          <div class="metric-bar-bg"><div class="metric-bar-fill" id="barHead" style="width:0%"></div></div>
+          <span class="metric-val" id="valHead">--%</span>
+        </div>
+        <div class="metric-row">
+          <span class="metric-label">FACE PRESENCE</span>
+          <div class="metric-bar-bg"><div class="metric-bar-fill" id="barFace" style="width:0%"></div></div>
+          <span class="metric-val" id="valFace">--%</span>
+        </div>
+        <div class="metric-row">
+          <span class="metric-label">BLINK NORMAL</span>
+          <div class="metric-bar-bg"><div class="metric-bar-fill" id="barBlink" style="width:0%"></div></div>
+          <span class="metric-val" id="valBlink">--%</span>
+        </div>
+        <div class="metric-row">
+          <span class="metric-label">CONTINUITY</span>
+          <div class="metric-bar-bg"><div class="metric-bar-fill" id="barCont" style="width:0%"></div></div>
+          <span class="metric-val" id="valCont">--%</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- グラフパネル -->
+    <div class="panel panel-graph">
+      <div class="panel-label">TEMPORAL ANALYSIS // LAST 5 MIN</div>
+      <div class="chart-wrapper">
+        <canvas id="scoreChart"></canvas>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ステータスバー -->
+  <div class="status-bar">
+    <div class="status-item">
+      <div class="status-dot" id="dotCamera"></div>
+      <span id="txtCamera">CAMERA: OFFLINE</span>
+    </div>
+    <div class="status-item">
+      <div class="status-dot" id="dotFace"></div>
+      <span id="txtFace">FACE: --</span>
+    </div>
+    <div class="status-item">
+      <div class="status-dot" id="dotLog"></div>
+      <span id="txtLog">LOG: 0 RECORDS</span>
+    </div>
+    <div class="status-item">
+      <span id="txtWindow">WINDOW: 30s</span>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// =============================================
+// 定数・設定
+// =============================================
+const WINDOW_SEC = 12
+const GRAPH_MAX_POINTS = 300 // 5分 × 60秒
+const UPDATE_INTERVAL = 1000 // 1秒ごとに更新
+
+// 重み
+const WEIGHTS = {
+  gaze: 0.35,
+  head: 0.20,
+  face: 0.15,
+  blink: 0.10,
+  continuity: 0.20,
+}
+
+// 頭部姿勢閾値（度）
+const HEAD_YAW_THRESH = 18
+const HEAD_PITCH_THRESH = 12
+
+// EAR（Eye Aspect Ratio）閾値
+const EAR_CLOSED_THRESH = 0.20
+const LONG_BLINK_SEC = 0.5
+
+const DISPLAY_MODE = {
+  PRIVATE: 'private',
+  VIDEO: 'video',
+}
+
+// =============================================
+// 状態
+// =============================================
+const state = {
+  running: false,
+  frameData: [], // { ts, faceDetected, gazeOnScreen, headStable, earLeft, earRight }
+  logRecords: [],
+  lastFaceTs: 0,
+  blinkStart: null,
+  fpsHistory: [],
+  lastFrameTs: 0,
+  displayMode: DISPLAY_MODE.PRIVATE,
+}
+
+// =============================================
+// Chart.js 初期化
+// =============================================
+let chart
+function initChart() {
+  const ctx = document.getElementById('scoreChart').getContext('2d')
+  chart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: [],
+      datasets: [{
+        data: [],
+        borderColor: '#00ffff',
+        borderWidth: 2,
+        pointRadius: 0,
+        fill: true,
+        backgroundColor: 'rgba(0,255,255,0.06)',
+        tension: 0.4,
+      }]
+    },
+    options: {
+      animation: false,
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { enabled: false } },
+      scales: {
+        x: {
+          display: false,
+        },
+        y: {
+          min: 0,
+          max: 100,
+          grid: { color: 'rgba(26,26,46,0.8)', lineWidth: 1 },
+          ticks: {
+            color: '#444466',
+            font: { family: 'Share Tech Mono', size: 10 },
+            stepSize: 25,
+          },
+          border: { color: '#1a1a2e' },
+        }
+      }
+    }
+  })
+}
+
+function pushChartPoint(score) {
+  const now = new Date()
+  const label = now.toTimeString().slice(0,8)
+  chart.data.labels.push(label)
+  chart.data.datasets[0].data.push(score)
+  if (chart.data.labels.length > GRAPH_MAX_POINTS) {
+    chart.data.labels.shift()
+    chart.data.datasets[0].data.shift()
+  }
+  chart.update('none')
+}
+
+// =============================================
+// MediaPipe FaceMesh
+// =============================================
+let faceMesh
+const videoEl = document.getElementById('inputVideo')
+const canvasEl = document.getElementById('outputCanvas')
+const ctx2d = canvasEl.getContext('2d')
+
+function initFaceMesh() {
+  faceMesh = new FaceMesh({
+    locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`
+  })
+  faceMesh.setOptions({
+    maxNumFaces: 1,
+    refineLandmarks: true, // Iris ランドマーク有効
+    minDetectionConfidence: 0.5,
+    minTrackingConfidence: 0.5,
+  })
+  faceMesh.onResults(onResults)
+}
+
+// ランドマークインデックス（MediaPipe FaceMesh）
+// 左目外角:33, 左目内角:133, 左目上:159, 左目下:145
+// 右目外角:362, 右目内角:263, 右目上:386, 右目下:374
+// 左虹彩中心:468, 右虹彩中心:473
+const LM = {
+  leftEye:  { outer: 33,  inner: 133, top: 159, bot: 145 },
+  rightEye: { outer: 362, inner: 263, top: 386, bot: 374 },
+  leftIris: 468,
+  rightIris: 473,
+  // 頭部姿勢用（鼻先・顎・眉）
+  nose: 1,
+  chin: 199,
+  leftCheek: 234,
+  rightCheek: 454,
+  leftBrow: 70,
+  rightBrow: 300,
+}
+
+function calcEAR(lm, eye) {
+  const p1 = lm[eye.outer], p2 = lm[eye.inner]
+  const p3 = lm[eye.top],   p4 = lm[eye.bot]
+  const horizontal = Math.hypot(p1.x - p2.x, p1.y - p2.y)
+  const vertical   = Math.hypot(p3.x - p4.x, p3.y - p4.y)
+  return horizontal > 0 ? vertical / horizontal : 0
+}
+
+function calcGazeOnScreen(lm) {
+  // 虹彩が目の中央から大きくずれていれば画面外
+  function irisOffset(iris, eye) {
+    const cx = (lm[eye.outer].x + lm[eye.inner].x) / 2
+    const cy = (lm[eye.outer].y + lm[eye.inner].y) / 2
+    const w  = Math.abs(lm[eye.outer].x - lm[eye.inner].x)
+    const h  = Math.abs(lm[eye.top].y - lm[eye.bot].y)
+    if (w < 0.001 || h < 0.001) return 0
+    const offsetX = Math.abs(lm[iris].x - cx) / w
+    const offsetY = Math.abs(lm[iris].y - cy) / h
+    return offsetX * 0.7 + offsetY * 0.3
+  }
+  const leftOff  = irisOffset(LM.leftIris,  LM.leftEye)
+  const rightOff = irisOffset(LM.rightIris, LM.rightEye)
+  const avgOff = (leftOff + rightOff) / 2
+  // offset 0.03 付近までは高評価、0.20 を超えるとほぼ画面外扱い
+  return Math.max(0, Math.min(1, 1 - (avgOff - 0.03) / 0.17))
+}
+
+function calcHeadAngles(lm) {
+  // 簡易的な頭部向き推定
+  // Yaw: 左右の頬の x 位置の非対称性
+  const leftCx  = lm[LM.leftCheek].x
+  const rightCx = lm[LM.rightCheek].x
+  const noseCx  = lm[LM.nose].x
+  const faceW   = rightCx - leftCx
+  const yawRaw  = faceW > 0 ? ((noseCx - leftCx) / faceW - 0.5) * 2 : 0
+  const yaw = yawRaw * 60 // 大まかに度換算
+
+  // Pitch: 鼻先と顎の y 相対位置（粗い推定）
+  const noseY  = lm[LM.nose].y
+  const chinY  = lm[LM.chin].y
+  const browY  = (lm[LM.leftBrow].y + lm[LM.rightBrow].y) / 2
+  const faceH  = chinY - browY
+  const pitchRaw = faceH > 0 ? ((noseY - browY) / faceH - 0.55) * 2 : 0
+  const pitch = pitchRaw * 40
+
+  return { yaw, pitch }
+}
+
+let frameCount = 0
+let fpsTimer = performance.now()
+
+function applyDisplayMode() {
+  const isPrivate = state.displayMode === DISPLAY_MODE.PRIVATE
+  document.getElementById('btnDisplay').textContent = isPrivate ? 'DISPLAY: EYE DOT' : 'DISPLAY: CAMERA'
+  document.querySelector('.camera-container').classList.toggle('private-mode', isPrivate)
+  renderDisplaySurface()
+}
+
+function drawCameraFrame(image) {
+  ctx2d.save()
+  ctx2d.scale(-1, 1)
+  ctx2d.translate(-canvasEl.width, 0)
+  ctx2d.drawImage(image, 0, 0)
+  ctx2d.restore()
+}
+
+function drawPrivateFrame() {
+  const gradient = ctx2d.createRadialGradient(
+    canvasEl.width / 2, canvasEl.height / 2, 10,
+    canvasEl.width / 2, canvasEl.height / 2, canvasEl.width * 0.45
+  )
+  gradient.addColorStop(0, 'rgba(0, 255, 255, 0.08)')
+  gradient.addColorStop(1, 'rgba(10, 10, 15, 0.96)')
+  ctx2d.fillStyle = gradient
+  ctx2d.fillRect(0, 0, canvasEl.width, canvasEl.height)
+
+  ctx2d.strokeStyle = 'rgba(26, 26, 46, 0.9)'
+  ctx2d.lineWidth = 1
+  for (let x = 0; x <= canvasEl.width; x += 32) {
+    ctx2d.beginPath()
+    ctx2d.moveTo(x, 0)
+    ctx2d.lineTo(x, canvasEl.height)
+    ctx2d.stroke()
+  }
+  for (let y = 0; y <= canvasEl.height; y += 32) {
+    ctx2d.beginPath()
+    ctx2d.moveTo(0, y)
+    ctx2d.lineTo(canvasEl.width, y)
+    ctx2d.stroke()
+  }
+}
+
+function syncCanvasSize() {
+  canvasEl.width  = videoEl.videoWidth  || 640
+  canvasEl.height = videoEl.videoHeight || 480
+}
+
+function renderDisplaySurface(image = null) {
+  syncCanvasSize()
+  if (state.displayMode === DISPLAY_MODE.VIDEO && image) drawCameraFrame(image)
+  else drawPrivateFrame()
+}
+
+function onResults(results) {
+  const now = Date.now()
+
+  // FPS計算
+  frameCount++
+  const elapsed = performance.now() - fpsTimer
+  if (elapsed >= 1000) {
+    const fps = Math.round(frameCount * 1000 / elapsed)
+    document.getElementById('camFps').textContent = `${fps} FPS`
+    state.fpsHistory.push(fps)
+    if (state.fpsHistory.length > 10) state.fpsHistory.shift()
+    frameCount = 0
+    fpsTimer = performance.now()
+  }
+
+  // キャンバスに描画
+  renderDisplaySurface(results.image)
+
+  const faceDetected = results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0
+  let gazeOnScreen = 0
+  let headStable = 0
+  let earLeft = 1, earRight = 1
+  let headYaw = 0, headPitch = 0
+
+  if (faceDetected) {
+    state.lastFaceTs = now
+    const lm = results.multiFaceLandmarks[0]
+
+    // EAR
+    earLeft  = calcEAR(lm, LM.leftEye)
+    earRight = calcEAR(lm, LM.rightEye)
+
+    // 視線
+    gazeOnScreen = calcGazeOnScreen(lm)
+
+    // 頭部姿勢
+    const angles = calcHeadAngles(lm)
+    headYaw   = angles.yaw
+    headPitch = angles.pitch
+    const yawRatio = Math.abs(headYaw) / HEAD_YAW_THRESH
+    const pitchRatio = Math.abs(headPitch) / HEAD_PITCH_THRESH
+    headStable = Math.max(0, Math.min(1, 1 - (yawRatio * 0.55 + pitchRatio * 0.45)))
+
+    // ランドマーク描画（サイバーパンク風）
+    drawLandmarks(lm, canvasEl.width, canvasEl.height, state.displayMode)
+
+    document.getElementById('camStatus').textContent = 'FACE DETECTED'
+    document.getElementById('dotFace').className = 'status-dot active'
+    document.getElementById('txtFace').textContent = `FACE: LOCKED`
+  } else {
+    document.getElementById('camStatus').textContent = 'NO FACE DETECTED'
+    document.getElementById('dotFace').className = 'status-dot warn'
+    document.getElementById('txtFace').textContent = 'FACE: LOST'
+  }
+
+  state.frameData.push({ ts: now, faceDetected, gazeOnScreen, headStable, earLeft, earRight })
+  // 窓より古いデータを削除
+  const cutoff = now - WINDOW_SEC * 1000
+  state.frameData = state.frameData.filter(d => d.ts >= cutoff)
+}
+
+function drawLandmarks(lm, w, h, mode = DISPLAY_MODE.VIDEO) {
+  // 目の輪郭をシアンで描く
+  const drawEyeContour = (indices) => {
+    ctx2d.beginPath()
+    ctx2d.strokeStyle = 'rgba(0,255,255,0.7)'
+    ctx2d.lineWidth = 1
+    indices.forEach((idx, i) => {
+      const x = (1 - lm[idx].x) * w // 鏡像補正
+      const y = lm[idx].y * h
+      i === 0 ? ctx2d.moveTo(x, y) : ctx2d.lineTo(x, y)
+    })
+    ctx2d.closePath()
+    ctx2d.stroke()
+  }
+
+  // 虹彩
+  const drawIris = (idx, color) => {
+    const x = (1 - lm[idx].x) * w
+    const y = lm[idx].y * h
+    ctx2d.beginPath()
+    ctx2d.arc(x, y, mode === DISPLAY_MODE.PRIVATE ? 6 : 4, 0, Math.PI * 2)
+    ctx2d.fillStyle = color
+    ctx2d.shadowColor = color
+    ctx2d.shadowBlur = mode === DISPLAY_MODE.PRIVATE ? 12 : 8
+    ctx2d.fill()
+    ctx2d.shadowBlur = 0
+  }
+
+  if (mode === DISPLAY_MODE.VIDEO) {
+    // 目の輪郭
+    drawEyeContour([33, 160, 158, 133, 153, 144])
+    drawEyeContour([362, 385, 387, 263, 373, 380])
+  }
+
+  drawIris(LM.leftIris, '#ff00ff')
+  drawIris(LM.rightIris, '#ff00ff')
+
+  if (mode === DISPLAY_MODE.VIDEO) {
+    // 鼻先
+    const nx = (1 - lm[LM.nose].x) * w
+    const ny = lm[LM.nose].y * h
+    ctx2d.beginPath()
+    ctx2d.arc(nx, ny, 2, 0, Math.PI * 2)
+    ctx2d.fillStyle = 'rgba(0,255,255,0.5)'
+    ctx2d.fill()
+  }
+}
+
+// =============================================
+// スコア算出
+// =============================================
+function computeMetrics() {
+  const frames = state.frameData
+  if (frames.length === 0) return null
+
+  const total = frames.length
+  const detected = frames.filter(d => d.faceDetected)
+  const facePresent = detected.length / total
+
+  if (detected.length === 0) {
+    return { facePresent, gazeOnScreen: 0, headStable: 0, blinkNormal: 1, sessionContinuity: 0 }
+  }
+
+  const gazeOnScreen = detected.reduce((s, d) => s + d.gazeOnScreen, 0) / detected.length
+  const headStable   = detected.reduce((s, d) => s + d.headStable, 0) / detected.length
+
+  // まばたき正常性: 目閉じフレームが多いほど減点
+  const closedFrames = detected.filter(d => (d.earLeft + d.earRight) / 2 < EAR_CLOSED_THRESH).length
+  const closedRatio  = closedFrames / detected.length
+  const blinkNormal  = Math.max(0, 1 - closedRatio * 3.5)
+
+  // セッション継続性: 顔ロスト、視線逸脱、頭動揺の合算で減点
+  let interruptCount = 0
+  for (let i = 0; i < total; i++) {
+    if (!frames[i].faceDetected || frames[i].gazeOnScreen < 0.65 || frames[i].headStable < 0.55) {
+      interruptCount++
+    }
+  }
+  const sessionContinuity = Math.max(0, 1 - interruptCount / total * 1.6)
+
+  return { facePresent, gazeOnScreen, headStable, blinkNormal, sessionContinuity }
+}
+
+function calcScore(metrics) {
+  return Math.round(100 * (
+    WEIGHTS.gaze        * metrics.gazeOnScreen +
+    WEIGHTS.head        * metrics.headStable +
+    WEIGHTS.face        * metrics.facePresent +
+    WEIGHTS.blink       * metrics.blinkNormal +
+    WEIGHTS.continuity  * metrics.sessionContinuity
+  ))
+}
+
+function classifyState(score, facePresent) {
+  if (facePresent < 0.5) return 'away'
+  if (score >= 90 && facePresent >= 0.85) return 'high'
+  if (score >= 65) return 'medium'
+  return 'low'
+}
+
+function getReasons(metrics, score) {
+  const reasons = []
+  if (metrics.facePresent < 0.5) reasons.push('FACE ABSENT')
+  else if (metrics.facePresent < 0.8) reasons.push('FACE UNSTABLE')
+  if (metrics.gazeOnScreen < 0.75) reasons.push('GAZE DIVERTED')
+  if (metrics.headStable < 0.7) reasons.push('HEAD MOVEMENT')
+  if (metrics.blinkNormal < 0.6) reasons.push('EYES CLOSED')
+  return reasons
+}
+
+// =============================================
+// UI 更新
+// =============================================
+function updateUI(metrics, score, stateStr, reasons) {
+  const numEl   = document.getElementById('scoreNumber')
+  const badgeEl = document.getElementById('stateBadge')
+  const reasonEl = document.getElementById('reasonText')
+
+  numEl.textContent = score
+  numEl.className   = `score-number ${stateStr}`
+
+  const stateLabels = { high: 'HIGH', medium: 'MEDIUM', low: 'LOW', away: 'AWAY' }
+  badgeEl.textContent = stateLabels[stateStr] || 'UNKNOWN'
+  badgeEl.className   = `state-badge ${stateStr}`
+
+  reasonEl.textContent = reasons.length > 0 ? `⚠ ${reasons.join(' / ')}` : ''
+
+  // 内訳バー
+  const setBar = (id, valId, v) => {
+    const pct = Math.round(v * 100)
+    document.getElementById(id).style.width  = pct + '%'
+    document.getElementById(valId).textContent = pct + '%'
+  }
+  setBar('barGaze',  'valGaze',  metrics.gazeOnScreen)
+  setBar('barHead',  'valHead',  metrics.headStable)
+  setBar('barFace',  'valFace',  metrics.facePresent)
+  setBar('barBlink', 'valBlink', metrics.blinkNormal)
+  setBar('barCont',  'valCont',  metrics.sessionContinuity)
+
+  // グラフ更新
+  pushChartPoint(score)
+
+  // ログ
+  const record = {
+    ts: new Date().toISOString(),
+    score,
+    state: stateStr,
+    detectable: metrics.facePresent >= 0.5,
+    reason: reasons.join('|') || null,
+    gaze_on_screen: +metrics.gazeOnScreen.toFixed(3),
+    head_stable:    +metrics.headStable.toFixed(3),
+    face_present:   +metrics.facePresent.toFixed(3),
+    blink_normal:   +metrics.blinkNormal.toFixed(3),
+    session_continuity: +metrics.sessionContinuity.toFixed(3),
+  }
+  state.logRecords.push(record)
+  document.getElementById('txtLog').textContent = `LOG: ${state.logRecords.length} RECORDS`
+}
+
+// =============================================
+// 定期更新
+// =============================================
+setInterval(() => {
+  if (!state.running) return
+  const metrics = computeMetrics()
+  if (!metrics) return
+
+  const score = calcScore(metrics)
+  const stateStr = classifyState(score, metrics.facePresent)
+  const reasons = getReasons(metrics, score)
+  updateUI(metrics, score, stateStr, reasons)
+}, UPDATE_INTERVAL)
+
+// 時刻表示
+setInterval(() => {
+  document.getElementById('sysTime').textContent = new Date().toTimeString().slice(0,8)
+}, 1000)
+
+document.getElementById('txtWindow').textContent = `WINDOW: ${WINDOW_SEC}s`
+
+// =============================================
+// CSV ダウンロード
+// =============================================
+document.getElementById('btnCsv').addEventListener('click', () => {
+  if (state.logRecords.length === 0) {
+    showFlash('NO DATA TO EXPORT')
+    return
+  }
+  const keys = Object.keys(state.logRecords[0])
+  const csv = [
+    keys.join(','),
+    ...state.logRecords.map(r => keys.map(k => r[k] ?? '').join(','))
+  ].join('\n')
+  const blob = new Blob([csv], { type: 'text/csv' })
+  const url  = URL.createObjectURL(blob)
+  const a    = document.createElement('a')
+  a.href = url
+  a.download = `focuscam_${new Date().toISOString().slice(0,10)}.csv`
+  a.click()
+  URL.revokeObjectURL(url)
+  showFlash('CSV EXPORTED')
+})
+
+document.getElementById('btnDisplay').addEventListener('click', () => {
+  state.displayMode = state.displayMode === DISPLAY_MODE.PRIVATE ? DISPLAY_MODE.VIDEO : DISPLAY_MODE.PRIVATE
+  applyDisplayMode()
+  showFlash(state.displayMode === DISPLAY_MODE.PRIVATE ? 'DISPLAY: EYE DOT MODE' : 'DISPLAY: CAMERA MODE')
+})
+
+function showFlash(msg) {
+  const el = document.getElementById('flash')
+  el.textContent = msg
+  el.classList.add('show')
+  setTimeout(() => el.classList.remove('show'), 2500)
+}
+
+// =============================================
+// 同意 → カメラ起動
+// =============================================
+document.getElementById('btnAgree').addEventListener('click', async () => {
+  document.getElementById('consentModal').style.display = 'none'
+  initChart()
+  initFaceMesh()
+  applyDisplayMode()
+  await startCamera()
+})
+
+async function startCamera() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
+      audio: false,
+    })
+    videoEl.srcObject = stream
+    await videoEl.play()
+    renderDisplaySurface()
+
+    document.getElementById('dotCamera').className = 'status-dot active'
+    document.getElementById('txtCamera').textContent = 'CAMERA: ONLINE'
+
+    state.running = true
+
+    const camera = new Camera(videoEl, {
+      onFrame: async () => {
+        await faceMesh.send({ image: videoEl })
+      },
+      width: 640,
+      height: 480,
+    })
+    camera.start()
+
+  } catch (err) {
+    document.getElementById('camStatus').textContent = 'CAMERA ERROR: ' + err.message
+    document.getElementById('dotCamera').className = 'status-dot warn'
+    showFlash('CAMERA ACCESS DENIED')
+  }
+}
+
+applyDisplayMode()
+</script>
+</body>
+</html>
