@@ -1,24 +1,33 @@
-# README
+# Focus Cam（ローカル専用集中力記録アプリ）
 
-This README would normally document whatever steps are necessary to get the
-application up and running.
+タスクごとの集中力をWebカメラで計測し、日次で振り返るローカル専用アプリ。
 
-Things you may want to cover:
+## プライバシー設計
 
-* Ruby version
+- 映像解析（MediaPipe）はすべてブラウザ内で完結し、映像・画像・ランドマーク座標はサーバに送信・保存しない。
+- サーバへ送るのは集計済み数値（平均スコア・状態別割合・中断回数・計測秒数）のみ。
+- サーバは `127.0.0.1` のみにバインドし、外部からアクセスできない。
 
-* System dependencies
+## 起動
 
-* Configuration
+```bash
+cd focus_cam_app
+bin/rails db:migrate
+bin/rails server
+```
 
-* Database creation
+ブラウザで `http://127.0.0.1:3000` を開く。
 
-* Database initialization
+## 使い方
 
-* How to run the test suite
+1. タスク一覧でタスクを追加する。
+2. 「計測開始」で計測画面へ移動し、カメラ許可後に計測を開始する。
+3. 作業終了時に「計測終了して保存」を押すと、セッションの集計値だけが保存される。
+4. 「日次レポート」で当日の集中度を振り返り、施策メモ（PDCA）を記録する。
 
-* Services (job queues, cache servers, search engines, etc.)
+## テスト
 
-* Deployment instructions
-
-* ...
+```bash
+bin/rails test
+bin/rails test:system
+```

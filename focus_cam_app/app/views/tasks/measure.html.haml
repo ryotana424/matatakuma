@@ -1,0 +1,40 @@
+- content_for(:title) { "計測中: #{@task.name} | Focus Cam" }
+
+.measure-page{ data: { controller: "measure", measure_task_id_value: @task.id, measure_create_url_value: task_sessions_path(@task) } }
+  .page-head.measure-head
+    %div
+      %p.measure-kicker MEASUREMENT
+      %h1.page-title= "計測中: #{@task.name}"
+    = link_to "タスク一覧へ戻る", tasks_path, class: "btn btn--ghost"
+
+  .measure-grid
+    %section.panel.measure-camera{ "aria-label": "カメラ計測" }
+      .measure-canvas-wrap
+        %video{ data: { measure_target: "video" }, autoplay: true, playsinline: true, muted: true, style: "display:none" }
+        %canvas.measure-canvas{ data: { measure_target: "canvas" }, width: "640", height: "480" }
+        .measure-camera__empty{ data: { measure_target: "placeholder" } }
+          %span.measure-camera__dot
+          %span カメラ待機中
+      .measure-actions
+        %button.btn.btn--primary{ type: "button", data: { action: "measure#start", measure_target: "startBtn" } }
+          計測開始
+        %button.btn.btn--ghost{ type: "button", disabled: true, data: { action: "measure#stop", measure_target: "stopBtn" } }
+          計測終了して保存
+
+    %aside.panel.measure-score{ "aria-label": "集中度スコア" }
+      .measure-score__label 現在の集中度
+      .measure-score__value{ data: { measure_target: "score" } } --
+      .measure-state{ data: { measure_target: "state" } } --
+      .measure-message{ data: { measure_target: "message" } }
+        計測開始後、スコアは1秒ごとに更新されます。
+
+      .measure-breakdown
+        .measure-breakdown__item
+          %span 保存対象
+          %strong 集計済み数値のみ
+        .measure-breakdown__item
+          %span 映像
+          %strong サーバ送信なし
+        .measure-breakdown__item
+          %span ランドマーク
+          %strong ブラウザ内処理

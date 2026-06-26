@@ -22,4 +22,12 @@ class TasksControllerTest < ActionDispatch::IntegrationTest
     get tasks_url
     assert_select "body", /1:01:01/
   end
+
+  test "計測画面が表示できる" do
+    task = Task.create!(name: "計測タスク")
+    get measure_task_url(task)
+    assert_response :success
+    assert_select "body", /計測中: 計測タスク/
+    assert_select "button", /計測開始/
+  end
 end

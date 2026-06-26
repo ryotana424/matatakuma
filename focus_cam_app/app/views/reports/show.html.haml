@@ -1,0 +1,49 @@
+- content_for(:title) { "#{@date.iso8601} のレポート | Focus Cam" }
+
+.page-head.report-head
+  %div
+    %p.measure-kicker DAILY REPORT
+    %h1.page-title= "#{@date.iso8601} のレポート"
+  = link_to "レポート一覧へ", reports_path, class: "btn btn--ghost"
+
+.report-summary-grid
+  .panel.report-stat
+    %span.report-stat__label 平均スコア
+    %strong.report-stat__value= @avg_score || "--"
+  .panel.report-stat
+    %span.report-stat__label 計測時間合計
+    %strong.report-stat__value= format_duration(@total_duration)
+  .panel.report-stat
+    %span.report-stat__label セッション数
+    %strong.report-stat__value= @sessions.size
+
+%section.panel.report-section
+  %h2.report-section__title セッション内訳
+  - if @sessions.any?
+    %table.task-table.report-session-table
+      %thead
+        %tr
+          %th タスク
+          %th 平均スコア
+          %th 時間
+          %th 中断
+      %tbody
+        - @sessions.each do |session|
+          %tr
+            %td.task-name{ "data-label": "タスク" }= session.task.name
+            %td.task-duration{ "data-label": "平均スコア" }= session.avg_score
+            %td.task-duration{ "data-label": "時間" }= format_duration(session.duration_sec)
+            %td.task-duration{ "data-label": "中断" }= session.interrupt_count
+  - else
+    %p.report-empty この日のセッションはありません。
+
+%section.panel.report-section
+  %h2.report-section__title 施策メモ・振り返り
+  = form_with model: @report, url: report_path(date: @date.iso8601), method: :patch, class: "report-form" do |f|
+    .report-form__field
+      = f.label :measure_note, "試した施策（PDCA）"
+      = f.text_area :measure_note, rows: 4, class: "input report-textarea"
+    .report-form__field
+      = f.label :reflection, "振り返り"
+      = f.text_area :reflection, rows: 4, class: "input report-textarea"
+    = f.submit "保存", class: "btn btn--primary"
