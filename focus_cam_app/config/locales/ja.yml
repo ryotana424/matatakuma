@@ -1,0 +1,14 @@
+ja:
+  errors:
+    format: "%{message}"
+    messages:
+      blank: "を入力してください"
+  activerecord:
+    models:
+      task: タスク
+      session: セッション
+      daily_report: 日次レポート
+    attributes:
+      task:
+        name: タスク名
+        status: 状態
