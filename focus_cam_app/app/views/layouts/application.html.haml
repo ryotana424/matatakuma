@@ -1,10 +1,10 @@
 !!!
 %html{ lang: "ja" }
   %head
-    %title= content_for(:title) || "Focus Cam"
+    %title= content_for(:title) || "Focus Pulse"
     %meta{ name: "viewport", content: "width=device-width,initial-scale=1" }
     %meta{ name: "apple-mobile-web-app-capable", content: "yes" }
-    %meta{ name: "application-name", content: "Focus Cam" }
+    %meta{ name: "application-name", content: "Focus Pulse" }
     %meta{ name: "mobile-web-app-capable", content: "yes" }
     = csrf_meta_tags
     = csp_meta_tag
@@ -35,7 +35,7 @@
               %circle{ cx: "12", cy: "12", r: "3" }
               %path{ d: "M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" }
           %span
-            %span.app-brand__name Focus Cam
+            %span.app-brand__name Focus Pulse
             %span.app-brand__sub 集中力を記録する
         = link_to "日次レポート", reports_path, class: "app-nav-link"
 
