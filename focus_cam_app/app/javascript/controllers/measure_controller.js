@@ -7,7 +7,7 @@ const WINDOW_MS = 30000
 
 // 映像解析はブラウザ内で完結し、終了時に集計値だけをPOSTする。
 export default class extends Controller {
-  static targets = ["video", "canvas", "score", "state", "startBtn", "stopBtn", "placeholder", "message"]
+  static targets = ["video", "canvas", "score", "state", "stopBtn", "placeholder", "message"]
   static values = { taskId: Number, createUrl: String }
 
   connect() {
@@ -16,6 +16,7 @@ export default class extends Controller {
     this.running = false
     this.ctx = this.canvasTarget.getContext("2d")
     this.drawIdleCanvas()
+    this.start()
   }
 
   disconnect() {
@@ -57,7 +58,6 @@ export default class extends Controller {
       this.startedAt = new Date()
       this.frameBuffer = []
       this.samples = []
-      this.startBtnTarget.hidden = true
       this.stopBtnTarget.disabled = false
       this.placeholderTarget.hidden = true
       this.messageTarget.textContent = "計測中です。映像は端末内でのみ解析されます。"
@@ -123,9 +123,7 @@ export default class extends Controller {
     if (response.ok) {
       window.location.href = "/tasks"
     } else {
-      this.startBtnTarget.disabled = false
-      this.startBtnTarget.hidden = false
-      this.messageTarget.textContent = "保存に失敗しました。もう一度試してください。"
+      this.messageTarget.textContent = "保存に失敗しました。ページを再読み込みしてもう一度試してください。"
     }
   }
 
@@ -138,10 +136,6 @@ export default class extends Controller {
     if (this.videoTarget.srcObject) {
       this.videoTarget.srcObject.getTracks().forEach((track) => track.stop())
       this.videoTarget.srcObject = null
-    }
-    if (this.hasStartBtnTarget) {
-      this.startBtnTarget.disabled = false
-      this.startBtnTarget.hidden = false
     }
     if (this.hasStopBtnTarget) this.stopBtnTarget.disabled = true
     if (this.hasPlaceholderTarget) this.placeholderTarget.hidden = false

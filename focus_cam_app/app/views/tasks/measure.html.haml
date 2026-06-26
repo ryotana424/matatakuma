@@ -16,8 +16,6 @@
           %span.measure-camera__dot
           %span カメラ待機中
       .measure-actions
-        %button.btn.btn--primary{ type: "button", data: { action: "measure#start", measure_target: "startBtn" } }
-          計測開始
         %button.btn.btn--ghost{ type: "button", disabled: true, data: { action: "measure#stop", measure_target: "stopBtn" } }
           計測終了して保存
 
@@ -26,7 +24,7 @@
       .measure-score__value{ data: { measure_target: "score" } } --
       .measure-state{ data: { measure_target: "state" } } --
       .measure-message{ data: { measure_target: "message" } }
-        計測開始後、スコアは1秒ごとに更新されます。
+        カメラ許可後、スコアは1秒ごとに更新されます。
 
       .measure-breakdown
         .measure-breakdown__item

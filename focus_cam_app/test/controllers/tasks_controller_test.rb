@@ -28,6 +28,7 @@ class TasksControllerTest < ActionDispatch::IntegrationTest
     get measure_task_url(task)
     assert_response :success
     assert_select "body", /計測中: 計測タスク/
-    assert_select "button", /計測開始/
+    assert_select "button", { text: /計測開始/, count: 0 }
+    assert_select "button", /計測終了して保存/
   end
 end
