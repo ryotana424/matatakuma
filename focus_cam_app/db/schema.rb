@@ -10,11 +10,29 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_06_26_043451) do
+ActiveRecord::Schema[8.1].define(version: 2026_06_26_044012) do
+  create_table "sessions", force: :cascade do |t|
+    t.integer "avg_score", null: false
+    t.float "away_ratio", null: false
+    t.datetime "created_at", null: false
+    t.integer "duration_sec", null: false
+    t.datetime "ended_at", null: false
+    t.float "high_ratio", null: false
+    t.integer "interrupt_count", null: false
+    t.float "low_ratio", null: false
+    t.float "medium_ratio", null: false
+    t.datetime "started_at", null: false
+    t.integer "task_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["task_id"], name: "index_sessions_on_task_id"
+  end
+
   create_table "tasks", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "name", null: false
     t.integer "status", default: 0, null: false
     t.datetime "updated_at", null: false
   end
+
+  add_foreign_key "sessions", "tasks"
 end
