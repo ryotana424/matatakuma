@@ -35,6 +35,9 @@
   --status-doing: #2dd4a7;
   --status-done: #5b8def;
 
+  /* エラー・危険を表す色（バリデーションエラー等で全画面共通利用） */
+  --danger: #ff9a8b;
+
   /* タイポグラフィ */
   --font-sans: "Outfit", "Hiragino Sans", "Noto Sans JP", system-ui, sans-serif;
   --font-mono: "JetBrains Mono", "SFMono-Regular", "Menlo", monospace;
@@ -188,7 +191,7 @@ a { color: var(--accent); text-decoration: none; }
 
 .task-form .field-error {
   flex-basis: 100%;
-  color: #ff9a8b;
+  color: var(--danger);
   font-size: 13px;
 }
 
