@@ -1,10 +1,369 @@
 /*
- * This is a manifest file that'll be compiled into application.css.
+ * Focus Cam デザインシステム（共通トークン）
  *
- * With Propshaft, assets are served efficiently without preprocessing steps. You can still include
- * application-wide styles in this file, but keep in mind that CSS precedence will follow the standard
- * cascading order, meaning styles declared later in the document or manifest will override earlier ones,
- * depending on specificity.
+ * 3画面（タスク一覧 / 計測 / 日次レポート）で共有するデザインの土台。
+ * カラートークン・タイポグラフィ・スペーシング・角丸・モーションをここに集約し、
+ * 後続画面はクラスとCSS変数を再利用する。
  *
- * Consider organizing styles into separate files for maintainability.
+ * 方向性: 「ディープワーク」のための落ち着いたダークUI。
+ *   - 純黒を避けたオフブラック地に、集中を象徴する単一アクセント（ティール）。
+ *   - 数値データ（計測時間など）は等幅フォントで視認性を担保。
+ *   - 装飾は最小限、モーションは抑制（集中を妨げない）。
  */
+
+/* ===== デザイントークン ===== */
+:root {
+  /* サーフェス（オフブラックの階層） */
+  --surface-base: #0e1014;       /* ページ背景 */
+  --surface-raised: #161a21;     /* パネル・カード */
+  --surface-overlay: #1e242d;    /* 入力欄・ホバー面 */
+  --surface-line: #2a313c;       /* 罫線・境界 */
+
+  /* テキスト */
+  --text-strong: #f2f5f8;        /* 見出し・主要数値 */
+  --text-body: #c2c9d4;          /* 本文 */
+  --text-muted: #828c9b;         /* 補足・ラベル */
+
+  /* アクセント（集中＝ティール、単一アクセントで全画面統一） */
+  --accent: #2dd4a7;
+  --accent-strong: #38e0b4;
+  --accent-ink: #06231c;         /* アクセント面に乗せる暗色テキスト */
+  --accent-soft: rgba(45, 212, 167, 0.12);
+
+  /* 状態色（タスクのステータス表示用、いずれも控えめな彩度） */
+  --status-todo: #7c8898;
+  --status-doing: #2dd4a7;
+  --status-done: #5b8def;
+
+  /* タイポグラフィ */
+  --font-sans: "Outfit", "Hiragino Sans", "Noto Sans JP", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "SFMono-Regular", "Menlo", monospace;
+
+  /* 角丸（一貫したスケール: カード16 / コントロール10 / ピル999） */
+  --radius-card: 16px;
+  --radius-control: 10px;
+  --radius-pill: 999px;
+
+  /* スペーシング・影 */
+  --space-page: clamp(20px, 5vw, 56px);
+  --shadow-card: 0 18px 48px rgba(0, 0, 0, 0.35);
+
+  /* モーション（抑制的・集中を妨げない） */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --dur: 0.22s;
+}
+
+/* ===== ベース ===== */
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background:
+    radial-gradient(1100px 620px at 82% -8%, rgba(45, 212, 167, 0.08), transparent 60%),
+    var(--surface-base);
+  color: var(--text-body);
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100dvh;
+}
+
+a { color: var(--accent); text-decoration: none; }
+
+/* ===== レイアウト土台 ===== */
+.app-shell {
+  width: 100%;
+  max-width: 960px;
+  margin: 0 auto;
+  padding: var(--space-page);
+}
+
+/* グローバルヘッダー（全画面共通） */
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 36px;
+}
+
+.app-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.app-brand__mark {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: linear-gradient(150deg, var(--accent-strong), var(--accent));
+  display: grid;
+  place-items: center;
+  color: var(--accent-ink);
+  flex-shrink: 0;
+}
+
+.app-brand__name {
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--text-strong);
+}
+
+.app-brand__sub {
+  display: block;
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.3;
+}
+
+.app-nav-link {
+  font-size: 14px;
+  color: var(--text-muted);
+  padding: 8px 14px;
+  border-radius: var(--radius-control);
+  border: 1px solid var(--surface-line);
+  transition: color var(--dur) var(--ease-out),
+              border-color var(--dur) var(--ease-out),
+              background var(--dur) var(--ease-out);
+}
+.app-nav-link:hover {
+  color: var(--text-strong);
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+/* ===== 通知（flash） ===== */
+.flash {
+  margin: 0 0 24px;
+  padding: 12px 16px;
+  border-radius: var(--radius-control);
+  background: var(--accent-soft);
+  border: 1px solid rgba(45, 212, 167, 0.3);
+  color: var(--accent-strong);
+  font-size: 14px;
+}
+
+/* ===== 見出し ===== */
+.page-head {
+  margin-bottom: 28px;
+}
+.page-title {
+  margin: 0;
+  font-size: clamp(28px, 4vw, 40px);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  color: var(--text-strong);
+}
+.page-lead {
+  margin: 8px 0 0;
+  color: var(--text-muted);
+  font-size: 15px;
+  max-width: 60ch;
+}
+
+/* ===== 汎用パネル ===== */
+.panel {
+  background: var(--surface-raised);
+  border: 1px solid var(--surface-line);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+}
+
+/* ===== タスク追加フォーム ===== */
+.task-form {
+  display: flex;
+  gap: 12px;
+  padding: 16px;
+  margin-bottom: 28px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.task-form .field-error {
+  flex-basis: 100%;
+  color: #ff9a8b;
+  font-size: 13px;
+}
+
+.input {
+  flex: 1 1 220px;
+  min-width: 0;
+  background: var(--surface-overlay);
+  border: 1px solid var(--surface-line);
+  border-radius: var(--radius-control);
+  color: var(--text-strong);
+  font: inherit;
+  padding: 12px 14px;
+  transition: border-color var(--dur) var(--ease-out),
+              box-shadow var(--dur) var(--ease-out);
+}
+.input::placeholder { color: var(--text-muted); }
+.input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+/* ボタン */
+.btn {
+  font: inherit;
+  font-weight: 600;
+  border-radius: var(--radius-control);
+  border: 1px solid transparent;
+  padding: 12px 20px;
+  cursor: pointer;
+  transition: transform var(--dur) var(--ease-out),
+              background var(--dur) var(--ease-out),
+              border-color var(--dur) var(--ease-out),
+              color var(--dur) var(--ease-out);
+  white-space: nowrap;
+}
+.btn:active { transform: translateY(1px); }
+
+.btn--primary {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+.btn--primary:hover { background: var(--accent-strong); }
+
+.btn--ghost {
+  background: transparent;
+  border-color: var(--surface-line);
+  color: var(--text-body);
+}
+.btn--ghost:hover { border-color: var(--accent); color: var(--text-strong); }
+
+/* ===== タスク一覧（テーブル） ===== */
+.task-table {
+  width: 100%;
+  border-collapse: collapse;
+  overflow: hidden;
+  border-radius: var(--radius-card);
+}
+
+.task-table thead th {
+  text-align: left;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--surface-line);
+  background: var(--surface-raised);
+}
+
+.task-table tbody td {
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--surface-line);
+  background: var(--surface-raised);
+  vertical-align: middle;
+}
+.task-table tbody tr:last-child td { border-bottom: none; }
+.task-table tbody tr {
+  transition: background var(--dur) var(--ease-out);
+}
+.task-table tbody tr:hover td { background: var(--surface-overlay); }
+
+.task-name {
+  color: var(--text-strong);
+  font-weight: 500;
+}
+
+/* 計測時間（数値は等幅で揃える） */
+.task-duration {
+  font-family: var(--font-mono);
+  font-size: 15px;
+  color: var(--text-body);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ステータスのピル表示 */
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--surface-line);
+  color: var(--text-body);
+}
+.status-pill--todo  { color: var(--status-todo);  border-color: rgba(124, 136, 152, 0.4); }
+.status-pill--doing { color: var(--status-doing); border-color: rgba(45, 212, 167, 0.4); background: var(--accent-soft); }
+.status-pill--done  { color: var(--status-done);  border-color: rgba(91, 141, 239, 0.4); }
+
+/* 計測開始リンク */
+.measure-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--accent);
+  padding: 8px 14px;
+  border-radius: var(--radius-control);
+  border: 1px solid rgba(45, 212, 167, 0.3);
+  transition: background var(--dur) var(--ease-out),
+              border-color var(--dur) var(--ease-out);
+}
+.measure-link:hover {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+
+/* 空状態 */
+.empty-state {
+  padding: 56px 24px;
+  text-align: center;
+  color: var(--text-muted);
+}
+.empty-state__title {
+  color: var(--text-body);
+  font-size: 16px;
+  margin: 0 0 6px;
+}
+
+/* フッターのナビゲーション */
+.page-foot {
+  margin-top: 32px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* ===== レスポンシブ（狭幅ではテーブルをカード化） ===== */
+@media (max-width: 600px) {
+  .task-table thead { display: none; }
+  .task-table, .task-table tbody, .task-table tr, .task-table td { display: block; width: 100%; }
+  .task-table tbody tr {
+    margin-bottom: 12px;
+    border: 1px solid var(--surface-line);
+    border-radius: var(--radius-card);
+    overflow: hidden;
+  }
+  .task-table tbody td {
+    border-bottom: 1px solid var(--surface-line);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+  }
+  .task-table tbody td::before {
+    content: attr(data-label);
+    color: var(--text-muted);
+    font-size: 12px;
+    letter-spacing: 0.04em;
+  }
+}
+
+/* モーション抑制 */
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}

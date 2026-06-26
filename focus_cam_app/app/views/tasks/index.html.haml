@@ -1,0 +1,43 @@
+- content_for(:title) { "タスク一覧 | Focus Cam" }
+
+-# ステータスenum値（todo/doing/done）→ 日本語ラベルへの対応表
+- status_labels = { "todo" => "未着手", "doing" => "計測中", "done" => "完了" }
+
+.page-head
+  %h1.page-title タスク一覧
+  %p.page-lead
+    集中して取り組むタスクを登録し、計測を始めましょう。計測時間は自動で合計されます。
+
+= form_with model: @task, url: tasks_path, class: "panel task-form" do |f|
+  = f.text_field :name, placeholder: "タスク名を入力", class: "input", autofocus: true, "aria-label": "タスク名"
+  = f.submit "追加", class: "btn btn--primary"
+  - if @task.errors[:name].present?
+    %span.field-error= "タスク名#{@task.errors[:name].first}"
+
+- if @tasks.any?
+  %table.task-table.panel
+    %thead
+      %tr
+        %th タスク
+        %th 状態
+        %th 計測時間合計
+        %th{ "aria-label": "操作" }
+    %tbody
+      - @tasks.each do |task|
+        %tr
+          %td.task-name{ "data-label": "タスク" }= task.name
+          %td{ "data-label": "状態" }
+            %span.status-pill{ class: "status-pill--#{task.status}" }= status_labels[task.status]
+          %td.task-duration{ "data-label": "計測時間合計" }= format_duration(task.total_duration_sec)
+          %td{ "data-label": "操作" }
+            = link_to measure_task_path(task), class: "measure-link" do
+              %svg{ width: "15", height: "15", viewBox: "0 0 24 24", fill: "currentColor", "aria-hidden": "true" }
+                %path{ d: "M8 5v14l11-7z" }
+              計測開始
+- else
+  .panel.empty-state
+    %p.empty-state__title まだタスクがありません
+    %p 上のフォームから最初のタスクを追加してください。
+
+%footer.page-foot
+  = link_to "日次レポートを見る", reports_path, class: "btn btn--ghost"

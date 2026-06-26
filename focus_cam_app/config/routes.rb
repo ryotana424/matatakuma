@@ -9,6 +9,12 @@ Rails.application.routes.draw do
   # get "manifest" => "rails/pwa#manifest", as: :pwa_manifest
   # get "service-worker" => "rails/pwa#service_worker", as: :pwa_service_worker
 
-  # Defines the root path route ("/")
-  # root "posts#index"
+  root "tasks#index"
+  resources :tasks, only: [:index, :create, :update] do
+    member do
+      get :measure
+    end
+    resources :sessions, only: [:create]
+  end
+  resources :reports, only: [:index, :show, :update], param: :date, constraints: { date: /\d{4}-\d{2}-\d{2}/ }
 end
