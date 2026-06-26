@@ -57,7 +57,7 @@ export default class extends Controller {
       this.startedAt = new Date()
       this.frameBuffer = []
       this.samples = []
-      this.startBtnTarget.disabled = true
+      this.startBtnTarget.hidden = true
       this.stopBtnTarget.disabled = false
       this.placeholderTarget.hidden = true
       this.messageTarget.textContent = "計測中です。映像は端末内でのみ解析されます。"
@@ -69,7 +69,7 @@ export default class extends Controller {
   }
 
   onResults(results) {
-    this.drawFrame(results.image)
+    this.drawPrivacySurface()
 
     const lms = results.multiFaceLandmarks && results.multiFaceLandmarks[0]
     const faceDetected = Boolean(lms)
@@ -124,6 +124,7 @@ export default class extends Controller {
       window.location.href = "/tasks"
     } else {
       this.startBtnTarget.disabled = false
+      this.startBtnTarget.hidden = false
       this.messageTarget.textContent = "保存に失敗しました。もう一度試してください。"
     }
   }
@@ -138,19 +139,18 @@ export default class extends Controller {
       this.videoTarget.srcObject.getTracks().forEach((track) => track.stop())
       this.videoTarget.srcObject = null
     }
-    if (this.hasStartBtnTarget) this.startBtnTarget.disabled = false
+    if (this.hasStartBtnTarget) {
+      this.startBtnTarget.disabled = false
+      this.startBtnTarget.hidden = false
+    }
     if (this.hasStopBtnTarget) this.stopBtnTarget.disabled = true
     if (this.hasPlaceholderTarget) this.placeholderTarget.hidden = false
   }
 
-  drawFrame(image) {
-    if (!image) return
+  drawPrivacySurface() {
     this.syncCanvasSize()
-    this.ctx.save()
-    this.ctx.scale(-1, 1)
-    this.ctx.translate(-this.canvasTarget.width, 0)
-    this.ctx.drawImage(image, 0, 0, this.canvasTarget.width, this.canvasTarget.height)
-    this.ctx.restore()
+    this.ctx.fillStyle = "#111720"
+    this.ctx.fillRect(0, 0, this.canvasTarget.width, this.canvasTarget.height)
   }
 
   drawIdleCanvas() {
