@@ -15,6 +15,10 @@
         .measure-camera__empty{ data: { measure_target: "placeholder" } }
           %span.measure-camera__dot
           %span カメラ待機中
+      .measure-camera-control
+        %label.measure-camera-control__label{ for: "measure-camera-select" } カメラ
+        %select#measure-camera-select.input.measure-camera-control__select{ disabled: true, data: { measure_target: "cameraSelect", action: "measure#changeCamera" } }
+          %option カメラを確認中
       .measure-actions
         %button.btn.btn--ghost{ type: "button", disabled: true, data: { action: "measure#stop", measure_target: "stopBtn" } }
           計測終了して保存
@@ -25,6 +29,12 @@
       .measure-state{ data: { measure_target: "state" } } --
       .measure-message{ data: { measure_target: "message" } }
         カメラ許可後、スコアは1秒ごとに更新されます。
+
+      .measure-pulse{ "aria-label": "集中度波形" }
+        .measure-pulse__head
+          %span 集中度波形
+          %strong LIVE
+        %canvas.measure-pulse__canvas{ data: { measure_target: "pulseCanvas" }, width: "360", height: "96" }
 
       .measure-breakdown
         .measure-breakdown__item

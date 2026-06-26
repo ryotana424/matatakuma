@@ -10,6 +10,7 @@ Rails.application.routes.draw do
   # get "service-worker" => "rails/pwa#service_worker", as: :pwa_service_worker
 
   root "tasks#index"
+  get "about" => "pages#about", as: :about
   resources :tasks, only: [:index, :create, :update] do
     member do
       get :measure

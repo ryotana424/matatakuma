@@ -28,8 +28,9 @@
 threads_count = ENV.fetch("RAILS_MAX_THREADS", 3)
 threads threads_count, threads_count
 
-# ローカル専用アプリ。ループバック以外からのアクセスを物理的に遮断する
-bind "tcp://127.0.0.1:#{ENV.fetch("PORT", 3000)}"
+# ローカル専用アプリ。ループバック以外からのアクセスを物理的に遮断する。
+# 3000/8000 は他の開発サーバーと衝突しやすいため、既定ポートは 8765 にする。
+bind "tcp://127.0.0.1:#{ENV.fetch("PORT", 8765)}"
 
 # Allow puma to be restarted by `bin/rails restart` command.
 plugin :tmp_restart

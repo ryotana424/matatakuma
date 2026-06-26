@@ -37,7 +37,9 @@
           %span
             %span.app-brand__name Focus Pulse
             %span.app-brand__sub 集中力を記録する
-        = link_to "日次レポート", reports_path, class: "app-nav-link"
+        %nav.app-nav{ "aria-label": "グローバルナビゲーション" }
+          = link_to "説明", about_path, class: "app-nav-link"
+          = link_to "日次レポート", reports_path, class: "app-nav-link"
 
       - if notice.present?
         .flash= notice

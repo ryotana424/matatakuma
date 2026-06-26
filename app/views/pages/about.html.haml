@@ -1,0 +1,142 @@
+- content_for(:title) { "説明 | Focus Pulse" }
+
+.page-head
+  %p.page-kicker LOCAL REAL-TIME ESTIMATION
+  %h1.page-title Focus Pulse の計測方法
+  %p.page-lead
+    Focus Pulse は、Webカメラ映像から「画面に向かって作業している度合い」を推定します。
+    認知的集中そのものではなく、顔・目・頭部姿勢から作る行動的な代理指標です。
+
+.about-summary
+  .about-summary__item
+    %span.about-summary__label 処理場所
+    %span.about-summary__value ブラウザ内
+  .about-summary__item
+    %span.about-summary__label 保存対象
+    %span.about-summary__value 集計値のみ
+  .about-summary__item
+    %span.about-summary__label 既定ポート
+    %span.about-summary__value 8765
+
+.about-article
+  %section.panel.about-panel
+    %h2 計測の流れ
+    %ol
+      %li ブラウザのカメラ入力を MediaPipe FaceMesh へ渡します。
+      %li FaceMesh が顔ランドマークと虹彩周辺ランドマークを推定します。
+      %li 各フレームから視線、頭部姿勢、顔検出、目の開閉を数値化します。
+      %li 直近のフレームを集計し、重み付き合計で集中度スコアを出します。
+      %li セッション終了時、平均スコアや状態別割合などの集計値だけをRailsへ保存します。
+
+  %section.panel.about-panel
+    %h2 スコア計算
+    %p
+      スコアは5つの指標を0.0から1.0に正規化し、重み付きで合算します。
+      視線と継続性をやや重く扱い、顔ロストや視線逸脱にも反応する設計です。
+    .formula-box
+      score = 100 * (0.35 * GazeOnScreen
+      %br
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+ 0.20 * HeadStable
+      %br
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+ 0.15 * FacePresent
+      %br
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+ 0.10 * BlinkNormal
+      %br
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+ 0.20 * SessionContinuity)
+    %p
+      状態分類は、顔検出率が50%未満なら AWAY、スコア90以上かつ顔検出率85%以上なら HIGH、
+      スコア65以上なら MEDIUM、それ以外は LOW です。
+
+  %section.panel.about-panel
+    %h2 指標の意味
+    .metric-list
+      .metric-item
+        .metric-visual.metric-visual--gaze{ "aria-hidden": "true" }
+          .eye-shape
+            .iris-dot
+          .screen-line
+        .metric-copy
+          %strong GazeOnScreen
+          %span
+            虹彩が目の中央付近にあるかを見ます。左右どちらかに大きく寄るほど、
+            画面外を見ている可能性が高いものとして減点します。
+      .metric-item
+        .metric-visual.metric-visual--head{ "aria-hidden": "true" }
+          .face-oval
+            .face-axis.face-axis--vertical
+            .face-axis.face-axis--horizontal
+            .nose-point
+          .angle-mark.angle-mark--left
+          .angle-mark.angle-mark--right
+        .metric-copy
+          %strong HeadStable
+          %span
+            顔の中心線が正面からどれだけ外れているかを見ます。横向きやうつむきが大きいほど、
+            作業画面から姿勢が外れたものとして減点します。
+      .metric-item
+        .metric-visual.metric-visual--face{ "aria-hidden": "true" }
+          .frame-dot.frame-dot--on
+          .frame-dot.frame-dot--on
+          .frame-dot.frame-dot--on
+          .frame-dot.frame-dot--off
+          .frame-dot.frame-dot--on
+        .metric-copy
+          %strong FacePresent
+          %span
+            直近の集計窓で、顔を検出できたフレームの割合です。席を外したり顔が画面外へ出たりすると下がります。
+      .metric-item
+        .metric-visual.metric-visual--blink{ "aria-hidden": "true" }
+          .blink-eye.blink-eye--open
+          .blink-eye.blink-eye--closed
+          .ear-ratio
+            %span vertical
+            %span horizontal
+        .metric-copy
+          %strong BlinkNormal
+          %span
+            目の縦幅と横幅の比率から、目を閉じている時間が長すぎないかを見ます。
+            閉眼フレームが多い場合に減点します。
+      .metric-item
+        .metric-visual.metric-visual--continuity{ "aria-hidden": "true" }
+          .timeline-segment.timeline-segment--good
+          .timeline-segment.timeline-segment--good
+          .timeline-segment.timeline-segment--break
+          .timeline-segment.timeline-segment--good
+          .timeline-segment.timeline-segment--break
+        .metric-copy
+          %strong SessionContinuity
+          %span
+            顔ロスト、視線逸脱、頭部の大きな動きを「中断」として数えます。
+            中断が少なく、画面に向かう状態が続くほど高くなります。
+
+  %section.panel.about-panel
+    %h2 根拠
+    %p
+      根拠は「顔・目のランドマークから行動的な代理指標を作る」ことです。
+      MediaPipe FaceMesh は単眼カメラ入力から顔の3Dランドマークをリアルタイム推定できます。
+    %p
+      まばたきや閉眼の検出には、目の横幅と縦幅の比率を見る Eye Aspect Ratio 型の考え方を使っています。
+      視線推定は精密なアイトラッカーではなく、虹彩位置の相対的なずれを使った簡易推定です。
+    %h3 参考
+    %ul
+      %li= link_to "MediaPipe Face Mesh documentation", "https://chuoling.github.io/mediapipe/solutions/face_mesh.html", target: "_blank", rel: "noreferrer"
+      %li= link_to "MediaPipe Iris documentation", "https://chuoling.github.io/mediapipe/solutions/iris.html", target: "_blank", rel: "noreferrer"
+      %li= link_to "MediaPipe: A Framework for Building Perception Pipelines", "https://arxiv.org/abs/1906.08172", target: "_blank", rel: "noreferrer"
+      %li Tereza Soukupova and Jan Cech, Real-Time Eye Blink Detection using Facial Landmarks, 2016.
+
+  %section.panel.about-panel.warning-panel
+    %h2 限界
+    %p
+      %strong 認知的集中の直接測定ではありません。
+      測っているのは、カメラから見える顔・目・頭部の状態だけです。
+    %p
+      照明、カメラ位置、眼鏡、髪、顔の向き、画面外資料を見る作業などで値は変わります。
+      人事評価、監視、懲戒判断、医療判断には使わないでください。
+
+  %section.panel.about-panel
+    %h2 プライバシー
+    %ul
+      %li 映像解析はブラウザ上で実行されます。
+      %li 映像、画像、ランドマーク座標はサーバへ送信しません。
+      %li サーバに保存するのは平均スコア、状態別割合、中断回数、計測秒数などの集計値だけです。
+      %li サーバは 127.0.0.1 のみにバインドし、外部からアクセスできない構成です。
