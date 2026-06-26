@@ -19,6 +19,14 @@ class SessionTest < ActiveSupport::TestCase
     assert_includes session.errors[:avg_score], "は100以下の値にしてください"
   end
 
+  test "比率は0〜1の範囲" do
+    session = @task.sessions.build(started_at: Time.current, ended_at: Time.current,
+                                   duration_sec: 60, avg_score: 50,
+                                   high_ratio: 1.5, medium_ratio: 0, low_ratio: 0, away_ratio: 0,
+                                   interrupt_count: 0)
+    assert_not session.valid?
+  end
+
   test "指定日のセッションを引けるスコープ" do
     @task.sessions.create!(started_at: Time.zone.local(2026, 6, 26, 10), ended_at: Time.zone.local(2026, 6, 26, 11),
                            duration_sec: 3600, avg_score: 80,
