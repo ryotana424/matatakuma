@@ -15,7 +15,7 @@ Rails.application.routes.draw do
     member do
       get :measure
     end
-    resources :sessions, only: [:create]
+    resources :sessions, only: [:create, :update]
   end
   resources :reports, only: [:index, :show, :update], param: :date, constraints: { date: /\d{4}-\d{2}-\d{2}/ }
 end
