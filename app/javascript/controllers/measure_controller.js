@@ -18,6 +18,8 @@ export default class extends Controller {
     this.samples = []
     this.pulsePoints = []
     this.running = false
+    this.sessionId = null
+    this.autosaveTick = null
     this.selectedDeviceId = this.readCookie(CAMERA_DEVICE_COOKIE)
     this.ctx = this.canvasTarget.getContext("2d")
     this.pulseCtx = this.pulseCanvasTarget.getContext("2d")
@@ -51,12 +53,14 @@ export default class extends Controller {
 
       this.running = true
       this.startedAt = new Date()
+      await this.createSession()
       this.frameBuffer = []
       this.samples = []
       this.stopBtnTarget.disabled = false
       this.placeholderTarget.hidden = true
       this.messageTarget.textContent = "計測中です。映像は端末内でのみ解析されます。"
       this.tick = setInterval(() => this.sampleOnce(), 1000)
+      this.autosaveTick = setInterval(() => this.saveProgress(), 15000)
     } catch (error) {
       this.messageTarget.textContent = `カメラを開始できません: ${error.message}`
       this.shutdown()
@@ -165,7 +169,7 @@ export default class extends Controller {
 
     const score = calcScore(metrics)
     const state = classifyState(score, metrics.facePresent)
-    this.samples.push({ score, state })
+    this.samples.push({ score, state, metrics })
     this.pulsePoints.push(score)
     if (this.pulsePoints.length > PULSE_MAX_POINTS) this.pulsePoints.shift()
     this.scoreTarget.textContent = score
@@ -174,21 +178,49 @@ export default class extends Controller {
     this.drawPulseGraph()
   }
 
-  async stop() {
-    if (!this.startedAt) return
-
-    const payload = aggregateSession(this.samples, this.startedAt, new Date())
-    this.shutdown()
-    this.stopBtnTarget.disabled = true
-    this.messageTarget.textContent = "保存中です..."
-
+  async createSession() {
     const response = await fetch(this.createUrlValue, {
       method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ session: { started_at: this.startedAt.toISOString() } }),
+    })
+
+    if (!response.ok) throw new Error("セッションを開始できません")
+
+    const body = await response.json()
+    this.sessionId = body.id
+  }
+
+  async saveProgress({ completed = false } = {}) {
+    if (!this.sessionId || !this.startedAt) return true
+
+    const now = new Date()
+    const payload = aggregateSession(this.samples, this.startedAt, now)
+    if (completed) {
+      payload.status = "completed"
+      payload.ended_reason = "stopped"
+      payload.ended_at = now.toISOString()
+    }
+
+    const response = await fetch(`${this.createUrlValue}/${this.sessionId}`, {
+      method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ session: payload }),
     })
 
-    if (response.ok) {
+    return response.ok
+  }
+
+  async stop() {
+    if (!this.startedAt) return
+
+    this.shutdown()
+    this.stopBtnTarget.disabled = true
+    this.messageTarget.textContent = "保存中です..."
+
+    const saved = await this.saveProgress({ completed: true })
+
+    if (saved) {
       window.location.href = "/tasks"
     } else {
       this.messageTarget.textContent = "保存に失敗しました。ページを再読み込みしてもう一度試してください。"
@@ -199,6 +231,8 @@ export default class extends Controller {
     this.running = false
     if (this.tick) clearInterval(this.tick)
     this.tick = null
+    if (this.autosaveTick) clearInterval(this.autosaveTick)
+    this.autosaveTick = null
     this.stopVideoStream()
     if (this.hasStopBtnTarget) this.stopBtnTarget.disabled = true
     if (this.hasPlaceholderTarget) this.placeholderTarget.hidden = false

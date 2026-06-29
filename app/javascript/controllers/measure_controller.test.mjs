@@ -19,4 +19,9 @@ assert.equal(source.includes("readCookie(CAMERA_DEVICE_COOKIE)"), true, "起動�
 assert.equal(source.includes("writeCookie(CAMERA_DEVICE_COOKIE, this.selectedDeviceId"), true, "起動・切替後に選択したカメラIDをCookieへ保存する")
 assert.equal(source.includes("SameSite=Lax"), true, "CookieはSameSite=Laxで保存する")
 
+assert.equal(source.includes("this.sessionId = null"), true, "開始時に作成したSession IDを保持する")
+assert.equal(source.includes("this.autosaveTick = setInterval(() => this.saveProgress(), 15000)"), true, "計測中に定期保存する")
+assert.equal(source.includes("await this.createSession()"), true, "計測開始時にrunningセッションを作成する")
+assert.equal(source.includes("await this.saveProgress({ completed: true })"), true, "停止時にcompletedとして最終保存する")
+
 console.log("measure controller privacy display OK")
