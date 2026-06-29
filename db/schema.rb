@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_06_26_044621) do
+ActiveRecord::Schema[8.1].define(version: 2026_06_30_000100) do
   create_table "daily_reports", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.text "measure_note"
@@ -21,16 +21,30 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_26_044621) do
   end
 
   create_table "sessions", force: :cascade do |t|
-    t.integer "avg_score", null: false
-    t.float "away_ratio", null: false
+    t.integer "avg_score", default: 0, null: false
+    t.float "away_ratio", default: 0.0, null: false
+    t.float "blink_normal_ratio", default: 0.0, null: false
     t.datetime "created_at", null: false
-    t.integer "duration_sec", null: false
-    t.datetime "ended_at", null: false
-    t.float "high_ratio", null: false
-    t.integer "interrupt_count", null: false
-    t.float "low_ratio", null: false
-    t.float "medium_ratio", null: false
+    t.integer "duration_sec", default: 0, null: false
+    t.datetime "ended_at"
+    t.string "ended_reason"
+    t.float "face_present_ratio", default: 0.0, null: false
+    t.float "gaze_on_screen_ratio", default: 0.0, null: false
+    t.float "head_stable_ratio", default: 0.0, null: false
+    t.float "high_ratio", default: 0.0, null: false
+    t.integer "interrupt_count", default: 0, null: false
+    t.datetime "last_seen_at"
+    t.integer "longest_away_streak_sec", default: 0, null: false
+    t.integer "longest_low_streak_sec", default: 0, null: false
+    t.float "low_ratio", default: 0.0, null: false
+    t.float "medium_ratio", default: 0.0, null: false
+    t.integer "save_count", default: 0, null: false
+    t.integer "score_max", default: 0, null: false
+    t.integer "score_min", default: 0, null: false
+    t.float "score_stddev", default: 0.0, null: false
+    t.float "session_continuity_ratio", default: 0.0, null: false
     t.datetime "started_at", null: false
+    t.integer "status", default: 0, null: false
     t.integer "task_id", null: false
     t.datetime "updated_at", null: false
     t.index ["task_id"], name: "index_sessions_on_task_id"

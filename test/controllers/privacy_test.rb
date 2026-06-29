@@ -14,6 +14,11 @@ class PrivacyTest < ActiveSupport::TestCase
     expected = %w[
       started_at ended_at duration_sec avg_score
       high_ratio medium_ratio low_ratio away_ratio interrupt_count
+      status last_seen_at save_count ended_reason
+      gaze_on_screen_ratio head_stable_ratio blink_normal_ratio
+      session_continuity_ratio face_present_ratio
+      score_min score_max score_stddev
+      longest_low_streak_sec longest_away_streak_sec
     ].sort
     actual = (Session.column_names - %w[id task_id created_at updated_at]).sort
     assert_equal expected, actual, "Sessionのカラムが集計値以外を含む"
