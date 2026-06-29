@@ -16,6 +16,12 @@
   .panel.report-stat
     %span.report-stat__label セッション数
     %strong.report-stat__value= @sessions.size
+  .panel.report-stat
+    %span.report-stat__label 低集中・離席比率
+    %strong.report-stat__value= @low_away_ratio ? "#{@low_away_ratio}%" : "--"
+  .panel.report-stat
+    %span.report-stat__label 改善候補
+    %strong.report-stat__value= @weakest_metric ? "#{@weakest_metric[:label]} #{@weakest_metric[:value]}%" : "--"
 
 %section.panel.report-section
   %h2.report-section__title セッション内訳
@@ -27,6 +33,8 @@
           %th 平均スコア
           %th 時間
           %th 中断
+          %th 内訳
+          %th 最長低下
       %tbody
         - @sessions.each do |session|
           %tr
@@ -34,6 +42,8 @@
             %td.task-duration{ "data-label": "平均スコア" }= session.avg_score
             %td.task-duration{ "data-label": "時間" }= format_duration(session.duration_sec)
             %td.task-duration{ "data-label": "中断" }= session.interrupt_count
+            %td.task-duration{ "data-label": "内訳" }= "視線 #{(session.gaze_on_screen_ratio * 100).round}%"
+            %td.task-duration{ "data-label": "最長低下" }= "低集中 #{session.longest_low_streak_sec}秒"
   - else
     %p.report-empty この日のセッションはありません。
 
