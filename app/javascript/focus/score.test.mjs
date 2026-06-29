@@ -1,5 +1,8 @@
 import assert from "node:assert"
-import { calcScore, classifyState, computeMetrics } from "./score.js"
+import { WEIGHTS, calcScore, classifyState, computeMetrics } from "./score.js"
+
+assert.deepEqual(WEIGHTS, { gaze: 0.35, head: 0.25, face: 0.10, blink: 0.15, continuity: 0.15 })
+assert.equal(Object.values(WEIGHTS).reduce((sum, weight) => sum + weight, 0), 1)
 
 const metrics = computeMetrics([
   { faceDetected: true, gazeOnScreen: 1, headStable: 1, earLeft: 0.3, earRight: 0.3 },
@@ -13,6 +16,15 @@ assert.equal(metrics.headStable, 0.7)
 assert.equal(metrics.blinkNormal, 0)
 assert.equal(metrics.sessionContinuity, 0)
 assert.equal(calcScore(metrics), 50)
+
+assert.equal(calcScore({
+  gazeOnScreen: 0.8,
+  headStable: 0.7,
+  blinkNormal: 0.9,
+  sessionContinuity: 0.6,
+  facePresent: 1.0,
+}), 78)
+
 assert.equal(classifyState(95, 0.4), "away")
 assert.equal(classifyState(95, 0.9), "high")
 assert.equal(classifyState(70, 0.9), "medium")

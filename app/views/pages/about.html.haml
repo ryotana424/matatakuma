@@ -32,17 +32,17 @@
     %h2 スコア計算
     %p
       スコアは5つの指標を0.0から1.0に正規化し、重み付きで合算します。
-      視線と継続性をやや重く扱い、顔ロストや視線逸脱にも反応する設計です。
+      視線と頭部姿勢を主に扱い、顔検出率は計測品質寄りの指標として扱う設計です。
     .formula-box
       score = 100 * (0.35 * GazeOnScreen
       %br
-      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+ 0.20 * HeadStable
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+ 0.25 * HeadStable
       %br
-      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+ 0.15 * FacePresent
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+ 0.15 * BlinkNormal
       %br
-      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+ 0.10 * BlinkNormal
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+ 0.15 * SessionContinuity
       %br
-      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+ 0.20 * SessionContinuity)
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+ 0.10 * FacePresent)
     %p
       状態分類は、顔検出率が50%未満なら AWAY、スコア90以上かつ顔検出率85%以上なら HIGH、
       スコア65以上なら MEDIUM、それ以外は LOW です。
@@ -83,7 +83,8 @@
         .metric-copy
           %strong FacePresent
           %span
-            直近の集計窓で、顔を検出できたフレームの割合です。席を外したり顔が画面外へ出たりすると下がります。
+            直近の集計窓で、顔を検出できたフレームの割合です。集中そのものより計測品質に近く、
+            席を外したり顔が画面外へ出たりすると下がります。
       .metric-item
         .metric-visual.metric-visual--blink{ "aria-hidden": "true" }
           .blink-eye.blink-eye--open

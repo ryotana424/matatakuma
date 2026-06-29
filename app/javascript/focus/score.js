@@ -1,5 +1,5 @@
 // PoC index.html から移植したスコア計算（純粋関数）
-export const WEIGHTS = { gaze: 0.35, head: 0.20, face: 0.15, blink: 0.10, continuity: 0.20 }
+export const WEIGHTS = { gaze: 0.35, head: 0.25, face: 0.10, blink: 0.15, continuity: 0.15 }
 export const EAR_CLOSED_THRESH = 0.20
 
 // frames: [{ faceDetected, gazeOnScreen, headStable, earLeft, earRight }]
