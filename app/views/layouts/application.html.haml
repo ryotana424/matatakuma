@@ -38,10 +38,16 @@
             %span.app-brand__name Focus Pulse
             %span.app-brand__sub 集中力を記録する
         %nav.app-nav{ "aria-label": "グローバルナビゲーション" }
-          = link_to "説明", about_path, class: "app-nav-link"
-          = link_to "日次レポート", reports_path, class: "app-nav-link"
+          = link_to "説明", about_path, class: "app-nav-link", data: { turbo_frame: "modal" }
+          = link_to "日次レポート", reports_path, class: "app-nav-link", data: { turbo_frame: "modal" }
 
       - if notice.present?
         .flash= notice
 
       = yield
+
+    -# 計測を止めずに説明・レポートを開くためのモーダル枠（全ページ共通）
+    .modal-overlay{ data: { controller: "modal", action: "click->modal#backdrop keydown.esc@window->modal#close" } }
+      .modal-dialog{ role: "dialog", "aria-modal": "true", data: { modal_target: "dialog" } }
+        %button.modal-close{ type: "button", "aria-label": "閉じる", data: { action: "modal#close" } } ✕
+        = turbo_frame_tag "modal", class: "modal-frame", data: { modal_target: "frame" }

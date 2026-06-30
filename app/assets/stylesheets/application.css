@@ -1070,6 +1070,65 @@ a { color: var(--accent); text-decoration: none; }
   }
 }
 
+/* ===== モーダル（計測を止めずに説明・レポートを開く） ===== */
+/* オーバーレイは open のときだけ表示。直接アクセス時はフレーム中身が
+   そのままページに描画され、オーバーレイの装飾は効かない。 */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: none;
+  align-items: flex-start;
+  justify-content: center;
+  padding: clamp(16px, 5vh, 56px) var(--space-page);
+  background: rgba(6, 9, 13, 0.72);
+  backdrop-filter: blur(4px);
+  overflow-y: auto;
+}
+
+.modal-overlay.open {
+  display: flex;
+}
+
+.modal-dialog {
+  position: relative;
+  width: 100%;
+  max-width: 960px;
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: clamp(20px, 4vw, 40px);
+  background: var(--surface-raised);
+  border: 1px solid var(--surface-line);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+}
+
+.modal-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  font-size: 18px;
+  line-height: 1;
+  color: var(--text-muted);
+  background: var(--surface-overlay);
+  border: 1px solid var(--surface-line);
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+}
+
+.modal-close:hover {
+  color: var(--text-strong);
+  border-color: var(--accent);
+}
+
+.modal-frame {
+  display: block;
+}
+
 /* モーション抑制 */
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; }
