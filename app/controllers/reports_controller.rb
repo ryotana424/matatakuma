@@ -7,10 +7,11 @@ class ReportsController < ApplicationController
     @date = Date.parse(params[:date])
     @report = DailyReport.for_date(@date)
     expire_stale_running_sessions
-    @sessions = Session.on_date(@date).includes(:task).order(started_at: :asc)
-    @avg_score = @sessions.average(:avg_score)&.round
-    @total_duration = @sessions.sum(:duration_sec)
-    @low_away_ratio = @sessions.any? ? ((@sessions.average(:low_ratio).to_f + @sessions.average(:away_ratio).to_f) * 100).round : nil
+    # ビューでテーブル描画のため全件ロードするので、集計も配列上で行い追加クエリを発生させない
+    @sessions = Session.on_date(@date).includes(:task).order(started_at: :asc).to_a
+    @avg_score = average_of(@sessions, :avg_score)&.round
+    @total_duration = @sessions.sum(&:duration_sec)
+    @low_away_ratio = low_away_ratio(@sessions)
     @weakest_metric = weakest_metric(@sessions)
   end
 
@@ -33,15 +34,28 @@ class ReportsController < ApplicationController
     end
   end
 
+  # ロード済みセッション配列の指定カラム平均。空配列なら nil
+  def average_of(sessions, attribute)
+    return nil if sessions.empty?
+
+    sessions.sum { |session| session.public_send(attribute) }.to_f / sessions.size
+  end
+
+  def low_away_ratio(sessions)
+    return nil if sessions.empty?
+
+    ((average_of(sessions, :low_ratio) + average_of(sessions, :away_ratio)) * 100).round
+  end
+
   def weakest_metric(sessions)
     return nil if sessions.empty?
 
     metrics = {
-      "視線" => sessions.average(:gaze_on_screen_ratio).to_f,
-      "姿勢" => sessions.average(:head_stable_ratio).to_f,
-      "まばたき" => sessions.average(:blink_normal_ratio).to_f,
-      "継続性" => sessions.average(:session_continuity_ratio).to_f,
-      "顔検出" => sessions.average(:face_present_ratio).to_f
+      "視線" => average_of(sessions, :gaze_on_screen_ratio),
+      "姿勢" => average_of(sessions, :head_stable_ratio),
+      "まばたき" => average_of(sessions, :blink_normal_ratio),
+      "継続性" => average_of(sessions, :session_continuity_ratio),
+      "顔検出" => average_of(sessions, :face_present_ratio)
     }
     label, value = metrics.min_by { |_label, metric_value| metric_value }
     { label: label, value: (value * 100).round }
