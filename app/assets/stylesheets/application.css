@@ -422,6 +422,43 @@ a { color: var(--accent); text-decoration: none; }
 }
 .btn--ghost:hover { border-color: var(--accent); color: var(--text-strong); }
 
+/* 計測終了して保存：計測完了時の主アクション。確実に目に入るよう塗りで強調する */
+.btn--finish {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 16px 24px;
+  font-size: 1.02rem;
+  letter-spacing: 0.02em;
+  color: var(--accent-ink);
+  background: linear-gradient(150deg, var(--accent-strong), var(--accent));
+  box-shadow: 0 10px 24px -10px var(--accent);
+}
+.btn--finish:hover {
+  background: linear-gradient(150deg, var(--accent-strong), var(--accent-strong));
+  box-shadow: 0 14px 30px -10px var(--accent);
+}
+/* 停止アイコン（白い角丸スクエア） */
+.btn--finish__icon {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  background: currentColor;
+  flex: none;
+}
+/* 計測が始まり押せるようになったら、見落とさないよう軽く脈動させる */
+.btn--finish:not(:disabled) {
+  animation: finish-pulse 2.4s var(--ease-out) infinite;
+}
+@keyframes finish-pulse {
+  0%, 100% { box-shadow: 0 10px 24px -10px var(--accent); }
+  50% { box-shadow: 0 10px 30px -6px var(--accent-strong); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .btn--finish:not(:disabled) { animation: none; }
+}
+
 /* ===== タスク一覧（テーブル） ===== */
 .task-table {
   width: 100%;
@@ -619,6 +656,11 @@ a { color: var(--accent); text-decoration: none; }
   gap: 12px;
   flex-wrap: wrap;
   margin-top: 16px;
+}
+
+/* 主アクションは横幅いっぱいに広げてカメラパネル下で目立たせる */
+.measure-actions .btn--finish {
+  flex: 1 1 100%;
 }
 
 .measure-actions .btn:disabled {

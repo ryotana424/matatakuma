@@ -20,8 +20,9 @@
         %select#measure-camera-select.input.measure-camera-control__select{ disabled: true, data: { measure_target: "cameraSelect", action: "measure#changeCamera" } }
           %option カメラを確認中
       .measure-actions
-        %button.btn.btn--ghost{ type: "button", disabled: true, data: { action: "measure#stop", measure_target: "stopBtn" } }
-          計測終了して保存
+        %button.btn.btn--finish{ type: "button", disabled: true, data: { action: "measure#stop", measure_target: "stopBtn" } }
+          %span.btn--finish__icon{ "aria-hidden": true }
+          %span 計測終了して保存
 
     %aside.panel.measure-score{ "aria-label": "集中度スコア" }
       .measure-score__label 現在の集中度
@@ -37,6 +38,9 @@
         %canvas.measure-pulse__canvas{ data: { measure_target: "pulseCanvas" }, width: "360", height: "96" }
 
       .measure-breakdown
+        .measure-breakdown__item
+          %span 瞬き回数
+          %strong{ data: { measure_target: "blinkCount" } } 0
         .measure-breakdown__item
           %span 保存対象
           %strong 集計済み数値のみ
