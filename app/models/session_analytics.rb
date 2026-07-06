@@ -51,5 +51,43 @@ class SessionAnalytics
       label, value = averages.min_by { |_label, metric_value| metric_value }
       { label: label, value: value }
     end
+
+    # 時間帯（0〜23時）ごとの平均スコア。セッション内の時間帯別スコアは保存して
+    # いないため、セッション平均スコアが計測時間全体で一定だったとみなし、
+    # 各時間帯に在席した秒数で重み付けした近似値を返す
+    def hourly_focus(sessions)
+      buckets = Array.new(24) { { weighted: 0.0, seconds: 0.0 } }
+
+      sessions.each do |session|
+        started = session.started_at
+        ended = session_end_time(session)
+        next if ended.nil? || ended <= started
+
+        cursor = started
+        while cursor < ended
+          segment_end = [cursor.beginning_of_hour + 1.hour, ended].min
+          seconds = segment_end - cursor
+          buckets[cursor.hour][:weighted] += session.avg_score * seconds
+          buckets[cursor.hour][:seconds] += seconds
+          cursor = segment_end
+        end
+      end
+
+      buckets.each_with_index.map do |bucket, hour|
+        avg = bucket[:seconds].positive? ? (bucket[:weighted] / bucket[:seconds]).round : nil
+        { hour: hour, avg_score: avg }
+      end
+    end
+
+    private
+
+    # セッションの実質終了時刻。中断などで ended_at が無い場合は last_seen_at、
+    # それも無ければ開始時刻＋計測秒数で補完する
+    def session_end_time(session)
+      return session.ended_at if session.ended_at
+      return session.last_seen_at if session.last_seen_at
+
+      session.duration_sec.positive? ? session.started_at + session.duration_sec : nil
+    end
   end
 end

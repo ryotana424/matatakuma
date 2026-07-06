@@ -71,4 +71,40 @@ class SessionAnalyticsTest < ActiveSupport::TestCase
   test "weakest_metricは空配列でnilを返す" do
     assert_nil SessionAnalytics.weakest_metric([])
   end
+
+  test "hourly_focusは時間帯ごとに在席秒数で重み付けした平均スコアを返す" do
+    sessions = [
+      # 10:00-11:00 スコア80
+      build_session(started_at: Time.zone.local(2026, 7, 6, 10),
+                    ended_at: Time.zone.local(2026, 7, 6, 11), avg_score: 80),
+      # 10:30-11:30 スコア60 → 10時台 = (80*3600 + 60*1800) / 5400 = 73.3 → 73
+      build_session(started_at: Time.zone.local(2026, 7, 6, 10, 30),
+                    ended_at: Time.zone.local(2026, 7, 6, 11, 30), avg_score: 60)
+    ]
+
+    hourly = SessionAnalytics.hourly_focus(sessions)
+
+    assert_equal 24, hourly.size
+    assert_equal 73, hourly[10][:avg_score]
+    assert_equal 60, hourly[11][:avg_score]
+    assert_nil hourly[9][:avg_score]
+    assert_nil hourly[12][:avg_score]
+  end
+
+  test "hourly_focusはended_atが無いセッションをlast_seen_atまでで集計する" do
+    session = build_session(ended_at: nil, status: :interrupted, ended_reason: "timeout",
+                            last_seen_at: Time.zone.local(2026, 7, 6, 10, 30), avg_score: 50)
+
+    hourly = SessionAnalytics.hourly_focus([session])
+
+    assert_equal 50, hourly[10][:avg_score]
+    assert_nil hourly[11][:avg_score]
+  end
+
+  test "hourly_focusは空配列で全時間帯nilを返す" do
+    hourly = SessionAnalytics.hourly_focus([])
+
+    assert_equal 24, hourly.size
+    assert hourly.all? { |bucket| bucket[:avg_score].nil? }
+  end
 end
