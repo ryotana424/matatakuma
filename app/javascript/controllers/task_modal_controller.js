@@ -13,7 +13,9 @@ export default class extends Controller {
 
   open() {
     this.overlayTarget.classList.add("open")
-    this.overlayTarget.querySelector("input")?.focus()
+    // 先頭の input は form_with が挿入する hidden の authenticity_token なので、
+    // 可視のテキスト入力（タスク名）を明示的に指定してフォーカスする
+    this.overlayTarget.querySelector("input[type=\"text\"]")?.focus()
   }
 
   close() {

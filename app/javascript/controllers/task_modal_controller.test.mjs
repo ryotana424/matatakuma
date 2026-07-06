@@ -11,7 +11,7 @@ assert.equal(source.includes("static values = { open: Boolean }"), true, "初期
 assert.equal(source.includes("if (this.openValue) this.open()"), true, "バリデーションエラー時は接続直後にモーダルを開く")
 assert.equal(source.includes("classList.add(\"open\")"), true, "openクラスの付与で表示する")
 assert.equal(source.includes("classList.remove(\"open\")"), true, "openクラスの除去で非表示にする")
-assert.equal(source.includes("querySelector(\"input\")"), true, "開いた時にタスク名入力へフォーカスする")
+assert.equal(source.includes("querySelector(\"input[type=\\\"text\\\"]\")"), true, "開いた時に可視のタスク名入力へフォーカスする")
 assert.equal(source.includes("backdrop(event)"), true, "背景クリックで閉じるアクションを持つ")
 assert.equal(source.includes("event.target === this.overlayTarget"), true, "ダイアログ内クリックでは閉じない")
 
