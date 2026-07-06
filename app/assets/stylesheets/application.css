@@ -888,6 +888,12 @@ a { color: var(--accent); text-decoration: none; }
   resize: vertical;
 }
 
+/* レポートのグラフ描画領域。canvasはmaintainAspectRatio:falseで親の高さに追従する */
+.report-chart {
+  position: relative;
+  height: 240px;
+}
+
 /* ===== レスポンシブ（狭幅ではテーブルをカード化） ===== */
 @media (max-width: 820px) {
   .measure-head {
