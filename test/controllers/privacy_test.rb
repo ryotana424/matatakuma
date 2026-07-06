@@ -20,7 +20,7 @@ class PrivacyTest < ActiveSupport::TestCase
       score_min score_max score_stddev
       longest_low_streak_sec longest_away_streak_sec
     ].sort
-    actual = (Session.column_names - %w[id task_id created_at updated_at]).sort
+    actual = (Session.column_names - %w[id task_id intervention_id created_at updated_at]).sort
     assert_equal expected, actual, "Sessionのカラムが集計値以外を含む"
   end
 end
