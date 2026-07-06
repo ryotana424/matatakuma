@@ -82,6 +82,22 @@ class SessionAnalytics
       end
     end
 
+    # タスクごとの集計。計測時間合計の降順で返す
+    def task_summaries(sessions)
+      sessions.group_by(&:task).map do |task, task_sessions|
+        {
+          task_name: task.name,
+          count: task_sessions.size,
+          avg_score: average(task_sessions, :avg_score)&.round,
+          total_duration_sec: task_sessions.sum(&:duration_sec),
+          interrupt_count: task_sessions.sum(&:interrupt_count)
+        }
+      end.sort { |a, b|
+        duration_cmp = b[:total_duration_sec] <=> a[:total_duration_sec]
+        duration_cmp != 0 ? duration_cmp : (a[:task_name] <=> b[:task_name])
+      }
+    end
+
     private
 
     # セッションの実質終了時刻。中断などで ended_at が無い場合は last_seen_at、

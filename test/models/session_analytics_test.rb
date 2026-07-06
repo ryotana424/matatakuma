@@ -118,4 +118,26 @@ class SessionAnalyticsTest < ActiveSupport::TestCase
     assert_equal 24, hourly.size
     assert hourly.all? { |bucket| bucket[:avg_score].nil? }
   end
+
+  test "task_summariesはタスクごとに集計し計測時間の降順で返す" do
+    other_task = Task.create!(name: "レビュー")
+    sessions = [
+      build_session(duration_sec: 1800, avg_score: 70, interrupt_count: 1),
+      build_session(task: other_task, duration_sec: 3600, avg_score: 90, interrupt_count: 0),
+      build_session(duration_sec: 1800, avg_score: 80, interrupt_count: 2)
+    ]
+
+    summaries = SessionAnalytics.task_summaries(sessions)
+
+    assert_equal ["レビュー", "作業"], summaries.map { |summary| summary[:task_name] }
+    work = summaries.last
+    assert_equal 2, work[:count]
+    assert_equal 75, work[:avg_score]
+    assert_equal 3600, work[:total_duration_sec]
+    assert_equal 3, work[:interrupt_count]
+  end
+
+  test "task_summariesは空配列で空配列を返す" do
+    assert_equal [], SessionAnalytics.task_summaries([])
+  end
 end
