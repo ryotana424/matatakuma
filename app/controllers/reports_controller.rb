@@ -16,6 +16,7 @@ class ReportsController < ApplicationController
     @weakest_metric = SessionAnalytics.weakest_metric(@sessions)
     @hourly_focus = SessionAnalytics.hourly_focus(@sessions)
     @task_summaries = SessionAnalytics.task_summaries(@sessions)
+    @interventions = Intervention.order(created_at: :desc)
   end
 
   def update

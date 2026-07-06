@@ -88,4 +88,14 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_select "h2", text: "タスク別サマリー"
     assert_select "td", text: "作業"
   end
+
+  test "日次レポートのセッション内訳から施策を選択できる" do
+    Intervention.create!(name: "ポモドーロ")
+
+    get report_url(date: "2026-06-26")
+
+    assert_response :success
+    assert_select "th", text: "施策"
+    assert_select "select[name=?] option", "session[intervention_id]", text: "ポモドーロ"
+  end
 end

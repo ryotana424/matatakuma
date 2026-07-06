@@ -71,6 +71,7 @@
             %th 中断
             %th 内訳
             %th 最長低下
+            %th 施策
         %tbody
           - @sessions.each do |session|
             %tr
@@ -80,6 +81,10 @@
               %td.task-duration{ "data-label": "中断" }= session.interrupt_count
               %td.task-duration{ "data-label": "内訳" }= "視線 #{(session.gaze_on_screen_ratio * 100).round}%"
               %td.task-duration{ "data-label": "最長低下" }= "低集中 #{session.longest_low_streak_sec}秒"
+              %td.task-duration{ "data-label": "施策" }
+                = form_with url: session_intervention_path(session), method: :patch, class: "report-intervention-form" do
+                  = select_tag "session[intervention_id]", options_from_collection_for_select(@interventions, :id, :name, session.intervention_id), include_blank: "なし", class: "input report-intervention-form__select"
+                  = submit_tag "更新", class: "btn btn--ghost", name: nil
     - else
       %p.report-empty この日のセッションはありません。
 

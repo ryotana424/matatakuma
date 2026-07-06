@@ -894,6 +894,13 @@ a { color: var(--accent); text-decoration: none; }
   height: 240px;
 }
 
+/* セッション内訳の施策セレクト＋更新ボタンを横並びにする */
+.report-intervention-form {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
 /* ===== レスポンシブ（狭幅ではテーブルをカード化） ===== */
 @media (max-width: 820px) {
   .measure-head {

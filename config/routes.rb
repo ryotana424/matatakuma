@@ -19,4 +19,7 @@ Rails.application.routes.draw do
   end
   resources :reports, only: [:index, :show, :update], param: :date, constraints: { date: /\d{4}-\d{2}-\d{2}/ }
   resources :interventions, only: [:index, :create, :show]
+  resources :sessions, only: [] do
+    resource :intervention, only: [:update], controller: "session_interventions"
+  end
 end
