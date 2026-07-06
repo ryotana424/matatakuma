@@ -39,6 +39,7 @@
         %nav.app-nav{ "aria-label": "グローバルナビゲーション" }
           = link_to "説明", about_path, class: "app-nav-link", data: { turbo_frame: "modal" }
           = link_to "日次レポート", reports_path, class: "app-nav-link", data: { turbo_frame: "modal" }
+          = link_to "施策", interventions_path, class: "app-nav-link", data: { turbo_frame: "modal" }
 
       - if notice.present?
         .flash= notice
