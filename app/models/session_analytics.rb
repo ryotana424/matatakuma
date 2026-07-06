@@ -82,7 +82,7 @@ class SessionAnalytics
       end
     end
 
-    # タスクごとの集計。計測時間合計の降順で返す
+    # タスクごとの集計。計測時間合計の降順、同値ならタスク名昇順で返す
     def task_summaries(sessions)
       sessions.group_by(&:task).map do |task, task_sessions|
         {
@@ -92,10 +92,7 @@ class SessionAnalytics
           total_duration_sec: task_sessions.sum(&:duration_sec),
           interrupt_count: task_sessions.sum(&:interrupt_count)
         }
-      end.sort { |a, b|
-        duration_cmp = b[:total_duration_sec] <=> a[:total_duration_sec]
-        duration_cmp != 0 ? duration_cmp : (a[:task_name] <=> b[:task_name])
-      }
+      end.sort_by { |summary| [-summary[:total_duration_sec], summary[:task_name]] }
     end
 
     private
