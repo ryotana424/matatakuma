@@ -37,10 +37,10 @@
       .measure-message{ data: { measure_target: "message" } }
         カメラ許可後、スコアは1秒ごとに更新されます。
 
-      .measure-pulse{ "aria-label": "集中度波形" }
+      .measure-pulse{ "aria-label": "スコア推移" }
         .measure-pulse__head
-          %span 集中度波形
-          %strong LIVE
+          %span スコア推移
+          %strong 30MIN
         %canvas.measure-pulse__canvas{ data: { measure_target: "pulseCanvas" }, width: "360", height: "96" }
 
       .measure-breakdown
@@ -53,12 +53,3 @@
         .measure-breakdown__item
           %span 瞬き回数
           %strong{ data: { measure_target: "blinkCount" } } 0
-        .measure-breakdown__item
-          %span 保存対象
-          %strong 集計済み数値のみ
-        .measure-breakdown__item
-          %span 映像
-          %strong サーバ送信なし
-        .measure-breakdown__item
-          %span ランドマーク
-          %strong ブラウザ内処理

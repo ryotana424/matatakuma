@@ -9,4 +9,9 @@ class Task < ApplicationRecord
   def total_duration_sec
     sessions.sum(:duration_sec)
   end
+
+  # 完了済みセッションの平均集中スコア。未計測なら nil
+  def average_score
+    sessions.completed.average(:avg_score)&.round
+  end
 end

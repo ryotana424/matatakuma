@@ -3,8 +3,7 @@ export function aggregateSession(samples, startedAt, endedAt) {
   const n = samples.length || 1
   const count = (state) => samples.filter((x) => x.state === state).length
   const scores = samples.map((x) => x.score)
-  const scoreTotal = scores.reduce((sum, score) => sum + score, 0)
-  const avg = Math.round(scoreTotal / n)
+  const avg = averageFocusableScore(samples)
 
   let interrupt = 0
   for (let i = 1; i < samples.length; i++) {
@@ -36,6 +35,14 @@ export function aggregateSession(samples, startedAt, endedAt) {
     longest_low_streak_sec: longestStreak(samples, "low"),
     longest_away_streak_sec: longestStreak(samples, "away"),
   }
+}
+
+export function averageFocusableScore(samples) {
+  const focusableSamples = samples.filter((sample) => sample.state !== "away")
+  if (focusableSamples.length === 0) return 0
+
+  const scoreTotal = focusableSamples.reduce((sum, sample) => sum + sample.score, 0)
+  return Math.round(scoreTotal / focusableSamples.length)
 }
 
 function avgMetric(samples, key) {

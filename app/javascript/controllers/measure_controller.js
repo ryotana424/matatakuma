@@ -1,10 +1,10 @@
 import { Controller } from "@hotwired/stimulus"
 import { LM, calcEAR, calcGazeOnScreen, calcHeadStable } from "focus/landmarks"
 import { computeMetrics, calcScore, classifyState, EAR_CLOSED_THRESH, isFaceTemporarilyAbsent } from "focus/score"
-import { aggregateSession } from "focus/aggregate"
+import { aggregateSession, averageFocusableScore } from "focus/aggregate"
 
 const WINDOW_MS = 30000
-const PULSE_MAX_POINTS = 72
+const SCORE_HISTORY_MAX_POINTS = 30 * 60
 const CAMERA_DEVICE_COOKIE = "focus_pulse_camera_device_id"
 const CAMERA_DEVICE_COOKIE_MAX_AGE = 60 * 60 * 24 * 180
 
@@ -16,17 +16,20 @@ export default class extends Controller {
   connect() {
     this.frameBuffer = []
     this.samples = []
-    this.pulsePoints = []
+    this.scoreHistory = []
     this.blinkCount = 0
     this.eyeClosed = false
     this.running = false
     this.sessionId = null
     this.autosaveTick = null
+    this.debugMode = this.isDebugModeEnabled()
+    this.debugRows = {}
     this.selectedDeviceId = this.readCookie(CAMERA_DEVICE_COOKIE)
     this.ctx = this.canvasTarget.getContext("2d")
     this.pulseCtx = this.pulseCanvasTarget.getContext("2d")
     this.drawIdleCanvas()
-    this.drawPulseGraph()
+    this.drawScoreTrend()
+    this.initDebugPanel()
     this.start()
   }
 
@@ -148,19 +151,21 @@ export default class extends Controller {
 
     const lms = results.multiFaceLandmarks && results.multiFaceLandmarks[0]
     const faceDetected = Boolean(lms)
-    let frame = { faceDetected, gazeOnScreen: 0, headStable: 0, earLeft: 0, earRight: 0 }
+    let frame = { faceDetected, gazeOnScreen: 0, headStable: 0, earLeft: 0, earRight: 0, avgEar: 0 }
 
     if (faceDetected) {
       const earLeft = calcEAR(lms, LM.leftEye)
       const earRight = calcEAR(lms, LM.rightEye)
+      const avgEar = (earLeft + earRight) / 2
       frame = {
         faceDetected: true,
         gazeOnScreen: calcGazeOnScreen(lms),
         headStable: calcHeadStable(lms),
         earLeft,
         earRight,
+        avgEar,
       }
-      this.detectBlink((earLeft + earRight) / 2)
+      this.detectBlink(avgEar)
       this.drawLandmarks(lms)
     }
 
@@ -175,22 +180,27 @@ export default class extends Controller {
       this.scoreTarget.textContent = "--"
       this.stateTarget.textContent = this.stateLabel("interrupted")
       this.stateTarget.dataset.state = "interrupted"
+      this.updateDebugPanel({ interrupted: true })
       return
     }
 
     const metrics = computeMetrics(this.frameBuffer)
-    if (!metrics) return
+    if (!metrics) {
+      this.updateDebugPanel({ waiting: true })
+      return
+    }
 
     const score = calcScore(metrics)
     const state = classifyState(score, metrics.facePresent)
     this.samples.push({ score, state, metrics })
     this.updateSessionAverage()
-    this.pulsePoints.push(score)
-    if (this.pulsePoints.length > PULSE_MAX_POINTS) this.pulsePoints.shift()
+    this.scoreHistory.push(score)
+    if (this.scoreHistory.length > SCORE_HISTORY_MAX_POINTS) this.scoreHistory.shift()
     this.scoreTarget.textContent = score
     this.stateTarget.textContent = this.stateLabel(state)
     this.stateTarget.dataset.state = state
-    this.drawPulseGraph()
+    this.drawScoreTrend()
+    this.updateDebugPanel({ score, state, metrics })
   }
 
   // EARの立ち下がり（開→閉）エッジで瞬きを1回カウントする。
@@ -219,9 +229,92 @@ export default class extends Controller {
       return
     }
 
-    const total = this.samples.reduce((sum, sample) => sum + sample.score, 0)
-    const average = Math.round(total / this.samples.length)
+    const average = averageFocusableScore(this.samples)
     this.sessionAverageTarget.textContent = average
+  }
+
+  isDebugModeEnabled() {
+    const params = new URLSearchParams(window.location.search)
+    const debug = params.get("debug")
+    return debug === "1" || debug === "true"
+  }
+
+  initDebugPanel() {
+    if (!this.debugMode) return
+
+    const panel = document.createElement("section")
+    panel.className = "measure-debug"
+    panel.setAttribute("aria-label", "デバッグ指標")
+
+    const title = document.createElement("div")
+    title.className = "measure-debug__title"
+    title.textContent = "DEBUG"
+    panel.append(title)
+
+    const rows = [
+      ["score", "Score (総合スコア)"],
+      ["state", "State (状態)"],
+      ["facePresent", "Face (顔検出率)"],
+      ["gazeOnScreen", "Gaze (視線)"],
+      ["headStable", "Head (頭部安定)"],
+      ["blinkNormal", "Blink (瞬き正常度)"],
+      ["sessionContinuity", "Continuity (継続度)"],
+      ["closedEyesDurationMs", "Closed eyes (閉眼時間)"],
+      ["avgEar", "EAR (目の開き)"],
+      ["blinkCount", "Blinks (瞬き回数)"],
+      ["frameCount", "Frames (計測フレーム)"],
+    ]
+
+    rows.forEach(([key, label]) => {
+      const row = document.createElement("div")
+      row.className = "measure-debug__row"
+
+      const labelEl = document.createElement("span")
+      labelEl.textContent = label
+
+      const valueEl = document.createElement("strong")
+      valueEl.setAttribute("data-measure-debug-key", key)
+      valueEl.textContent = "--"
+
+      row.append(labelEl, valueEl)
+      panel.append(row)
+      this.debugRows[key] = valueEl
+    })
+
+    const scorePanel = this.stateTarget.closest(".measure-score") || this.element
+    scorePanel.append(panel)
+  }
+
+  updateDebugPanel({ score = null, state = null, metrics = null, interrupted = false, waiting = false } = {}) {
+    if (!this.debugMode) return
+
+    const latestFrame = this.frameBuffer[this.frameBuffer.length - 1]
+    const fallbackState = interrupted ? "interrupted" : waiting ? "waiting" : state
+    const values = {
+      score: interrupted || waiting ? "--" : score,
+      state: fallbackState ? this.stateLabel(fallbackState) : "--",
+      facePresent: metrics ? this.formatRatio(metrics.facePresent) : "--",
+      gazeOnScreen: metrics ? this.formatRatio(metrics.gazeOnScreen) : "--",
+      headStable: metrics ? this.formatRatio(metrics.headStable) : "--",
+      blinkNormal: metrics ? this.formatRatio(metrics.blinkNormal) : "--",
+      sessionContinuity: metrics ? this.formatRatio(metrics.sessionContinuity) : "--",
+      closedEyesDurationMs: metrics ? `${Math.round(metrics.closedEyesDurationMs)}ms` : "--",
+      avgEar: latestFrame?.faceDetected ? this.formatNumber(latestFrame.avgEar, 3) : "--",
+      blinkCount: this.blinkCount,
+      frameCount: this.frameBuffer.length,
+    }
+
+    Object.entries(values).forEach(([key, value]) => {
+      if (this.debugRows[key]) this.debugRows[key].textContent = value
+    })
+  }
+
+  formatRatio(value) {
+    return Number.isFinite(value) ? `${Math.round(value * 100)}%` : "--"
+  }
+
+  formatNumber(value, digits = 2) {
+    return Number.isFinite(value) ? value.toFixed(digits) : "--"
   }
 
   async createSession() {
@@ -324,12 +417,19 @@ export default class extends Controller {
     this.ctx.fillRect(0, 0, this.canvasTarget.width, this.canvasTarget.height)
   }
 
-  drawPulseGraph() {
+  drawScoreTrend() {
     const canvas = this.pulseCanvasTarget
     const ctx = this.pulseCtx
     const width = canvas.width
     const height = canvas.height
     const pad = 10
+    const labelPad = 26
+    const plotLeft = pad + labelPad
+    const plotWidth = width - plotLeft - pad
+    const scoreToY = (score) => {
+      const normalized = Math.max(0, Math.min(1, score / 100))
+      return height - pad - normalized * (height - pad * 2)
+    }
 
     ctx.clearRect(0, 0, width, height)
     ctx.fillStyle = "#111720"
@@ -337,41 +437,41 @@ export default class extends Controller {
 
     ctx.strokeStyle = "rgba(42, 49, 60, 0.9)"
     ctx.lineWidth = 1
-    for (let x = 0; x <= width; x += 24) {
+    for (let x = plotLeft; x <= width - pad; x += 48) {
       ctx.beginPath()
       ctx.moveTo(x, 0)
       ctx.lineTo(x, height)
       ctx.stroke()
     }
-    for (let y = 0; y <= height; y += 24) {
+    ;[0, 50, 100].forEach((score) => {
+      const y = scoreToY(score)
       ctx.beginPath()
-      ctx.moveTo(0, y)
+      ctx.moveTo(plotLeft, y)
       ctx.lineTo(width, y)
       ctx.stroke()
-    }
+      ctx.fillStyle = "rgba(130, 140, 155, 0.75)"
+      ctx.font = "10px JetBrains Mono, monospace"
+      ctx.fillText(String(score), pad, y + 3)
+    })
 
-    if (this.pulsePoints.length === 0) {
+    if (this.scoreHistory.length === 0) {
       ctx.fillStyle = "rgba(130, 140, 155, 0.8)"
       ctx.font = "12px JetBrains Mono, monospace"
-      ctx.fillText("WAITING", pad, height / 2 + 4)
+      ctx.fillText("WAITING", plotLeft, height / 2 + 4)
       return
     }
 
+    const visibleMaxIndex = Math.max(Math.min(this.scoreHistory.length, SCORE_HISTORY_MAX_POINTS) - 1, 1)
     ctx.beginPath()
-    this.pulsePoints.forEach((score, index) => {
-      const x = pad + (index / Math.max(PULSE_MAX_POINTS - 1, 1)) * (width - pad * 2)
-      const normalized = Math.max(0, Math.min(1, score / 100))
-      const beat = index % 9 === 0 ? -10 : index % 9 === 1 ? 8 : 0
-      const y = height - pad - normalized * (height - pad * 2) + beat
+    this.scoreHistory.forEach((score, index) => {
+      const x = plotLeft + (index / visibleMaxIndex) * plotWidth
+      const y = scoreToY(score)
       if (index === 0) ctx.moveTo(x, y)
       else ctx.lineTo(x, y)
     })
     ctx.strokeStyle = "#2dd4a7"
     ctx.lineWidth = 2
-    ctx.shadowColor = "rgba(45, 212, 167, 0.65)"
-    ctx.shadowBlur = 8
     ctx.stroke()
-    ctx.shadowBlur = 0
   }
 
   drawLandmarks(lm) {

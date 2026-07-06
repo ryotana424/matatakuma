@@ -809,6 +809,46 @@ a { color: var(--accent); text-decoration: none; }
   font-weight: 600;
 }
 
+.measure-debug {
+  margin-top: 18px;
+  border: 1px solid rgba(45, 212, 167, 0.22);
+  border-radius: var(--radius-control);
+  background: rgba(17, 23, 32, 0.72);
+  overflow: hidden;
+}
+
+.measure-debug__title {
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--surface-line);
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.measure-debug__row {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 7px 12px;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  border-top: 1px solid rgba(42, 49, 60, 0.65);
+}
+
+.measure-debug__row:first-of-type {
+  border-top: 0;
+}
+
+.measure-debug__row strong {
+  color: var(--text-body);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
 /* ===== 日次レポート ===== */
 .report-list {
   display: grid;
