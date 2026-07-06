@@ -167,4 +167,39 @@ class TasksControllerTest < ActionDispatch::IntegrationTest
     get tasks_url
     assert_select ".measure-camera__empty", /タスクを選んで計測開始/
   end
+
+  test "一覧ページに本日のステータスバーが表示される" do
+    task = Task.create!(name: "コーディング")
+    task.sessions.create!(started_at: 2.hours.ago, ended_at: 1.hour.ago, duration_sec: 1800,
+                          avg_score: 80, status: :completed)
+    task.sessions.create!(started_at: 1.hour.ago, ended_at: 30.minutes.ago, duration_sec: 600,
+                          avg_score: 60, status: :completed)
+
+    get tasks_url
+
+    assert_select ".daily-status-bar" do
+      # 作業時間 1800+600 秒 = 0:40:00
+      assert_select "[data-measure-target='dailyDuration']", "0:40:00"
+      # 集中度総量 80*30 + 60*10 = 3000 → 3k
+      assert_select "[data-measure-target='dailyFocusVolume']", "3k"
+      # 平均 (80+60)/2 = 70
+      assert_select "[data-measure-target='dailyAverage']", "70"
+    end
+  end
+
+  test "本日のセッションがなければステータスバーはプレースホルダー表示" do
+    get tasks_url
+    assert_select ".daily-status-bar" do
+      assert_select "[data-measure-target='dailyDuration']", "0:00:00"
+      assert_select "[data-measure-target='dailyFocusVolume']", "--"
+      assert_select "[data-measure-target='dailyAverage']", "--"
+    end
+  end
+
+  test "計測ページに本日のステータスバーが表示される" do
+    task = Task.create!(name: "計測対象")
+    get measure_task_url(task)
+    assert_response :success
+    assert_select ".daily-status-bar"
+  end
 end

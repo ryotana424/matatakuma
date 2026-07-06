@@ -14,6 +14,8 @@
         %span.measure-camera__dot
         %span タスクを選んで計測開始
 
+  = render "status_bar", daily_sessions: @daily_sessions
+
   = render "task_list", tasks: @tasks, form_task: @task, current_task: nil
 
 %footer.page-foot

@@ -393,6 +393,33 @@ a { color: var(--accent); text-decoration: none; }
   cursor: default;
 }
 
+/* ===== 日次ステータスバー ===== */
+.daily-status-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 32px;
+  margin: 16px 0;
+  padding: 14px 20px;
+}
+
+.daily-status-bar__item {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.daily-status-bar__label {
+  color: var(--text-muted);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+}
+
+.daily-status-bar__value {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 18px;
+  color: var(--text-strong);
+}
+
 /* ===== タスク追加フォーム ===== */
 .task-form {
   display: flex;

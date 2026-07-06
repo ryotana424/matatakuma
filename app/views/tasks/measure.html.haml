@@ -53,3 +53,5 @@
         .measure-breakdown__item
           %span 瞬き回数
           %strong{ data: { measure_target: "blinkCount" } } 0
+
+  = render "status_bar", daily_sessions: @daily_sessions
