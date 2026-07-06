@@ -1,4 +1,8 @@
-// chart.js/auto@4.5.1 downloaded from https://ga.jspm.io/npm:chart.js@4.5.1/auto/auto.js
-
-import{Chart as e,registerables as r}from"../dist/chart.js";export{Animation,Animations,ArcElement,BarController,BarElement,BasePlatform,BasicPlatform,BubbleController,CategoryScale,Colors,DatasetController,Decimation,DomPlatform,DoughnutController,Element,Filler,Interaction,Legend,LineController,LineElement,LinearScale,LogarithmicScale,PieController,PointElement,PolarAreaController,RadarController,RadialLinearScale,Scale,ScatterController,SubTitle,TimeScale,TimeSeriesScale,Title,Tooltip,_adapters,_detectPlatform,animator,controllers,elements,layouts,plugins,registry,scales}from"../dist/chart.js";export{T as Ticks,d as defaults}from"../_/MwoWUuIu.js";import"@kurkle/color";e.register(...r);export{e as Chart,e as default,r as registerables};
-
+// chart.js/auto 相当のローカルラッパー。
+// dist/chart.js（vendor/javascript/chart.js.js）から Chart と registerables を読み、
+// 全コンポーネントを登録済みの Chart を default export する。
+// jspm の pin だと dist が相対import参照で404になるため、自己完結ESMバンドルを直接vendorして解決している。
+import { Chart, registerables } from "chart.js"
+Chart.register(...registerables)
+export default Chart
+export * from "chart.js"
