@@ -44,7 +44,7 @@ class SessionsController < ApplicationController
       :session_continuity_ratio, :face_present_ratio,
       :score_min, :score_max, :score_stddev,
       :longest_low_streak_sec, :longest_away_streak_sec,
-      :status, :ended_reason
+      :status, :ended_reason, :intervention_id
     )
   end
 end

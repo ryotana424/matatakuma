@@ -111,4 +111,30 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     assert_not session.attributes.key?("frame_image")
     assert_not session.attributes.key?("landmarks")
   end
+
+  test "計測中の保存で施策を紐付けできる" do
+    intervention = Intervention.create!(name: "ポモドーロ")
+    session = @task.sessions.create!(started_at: Time.zone.local(2026, 6, 26, 10),
+                                     status: :running, last_seen_at: Time.zone.local(2026, 6, 26, 10),
+                                     save_count: 0)
+
+    patch task_session_url(@task, session),
+          params: { session: { duration_sec: 60, avg_score: 70, intervention_id: intervention.id } }, as: :json
+
+    assert_response :ok
+    assert_equal intervention.id, session.reload.intervention_id
+  end
+
+  test "施策未選択（null）で施策の紐付けを外せる" do
+    intervention = Intervention.create!(name: "ポモドーロ")
+    session = @task.sessions.create!(started_at: Time.zone.local(2026, 6, 26, 10),
+                                     status: :running, last_seen_at: Time.zone.local(2026, 6, 26, 10),
+                                     save_count: 0, intervention: intervention)
+
+    patch task_session_url(@task, session),
+          params: { session: { duration_sec: 60, avg_score: 70, intervention_id: nil } }, as: :json
+
+    assert_response :ok
+    assert_nil session.reload.intervention_id
+  end
 end
