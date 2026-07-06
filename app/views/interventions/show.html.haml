@@ -1,0 +1,53 @@
+- content_for(:title) { "施策: #{@intervention.name} | Focus Pulse" }
+
+= turbo_frame_tag "modal" do
+  .page-head.report-head
+    %div
+      %p.measure-kicker INTERVENTION
+      %h1.page-title= "施策: #{@intervention.name}"
+    = link_to "施策一覧へ", interventions_path, class: "btn btn--ghost"
+
+  - if @intervention.description.present?
+    %p.page-lead= @intervention.description
+
+  %section.panel.report-section
+    %h2.report-section__title 効果比較（全期間）
+    - if @applied_summary[:count].zero?
+      %p.report-empty この施策を適用したセッションはまだありません。計測画面で施策を選択するか、日次レポートのセッション内訳から紐付けてください。
+    - else
+      %table.task-table
+        %thead
+          %tr
+            %th 指標
+            %th 施策あり
+            %th 施策なし
+        %tbody
+          %tr
+            %td.task-name{ "data-label": "指標" } セッション数
+            %td.task-duration{ "data-label": "施策あり" }= @applied_summary[:count]
+            %td.task-duration{ "data-label": "施策なし" }= @others_summary[:count]
+          %tr
+            %td.task-name{ "data-label": "指標" } 平均スコア
+            %td.task-duration{ "data-label": "施策あり" }= @applied_summary[:avg_score] || "--"
+            %td.task-duration{ "data-label": "施策なし" }= @others_summary[:avg_score] || "--"
+          %tr
+            %td.task-name{ "data-label": "指標" } 計測時間合計
+            %td.task-duration{ "data-label": "施策あり" }= format_duration(@applied_summary[:total_duration_sec])
+            %td.task-duration{ "data-label": "施策なし" }= format_duration(@others_summary[:total_duration_sec])
+          %tr
+            %td.task-name{ "data-label": "指標" } 低集中・離席比率
+            %td.task-duration{ "data-label": "施策あり" }= @applied_summary[:low_away_ratio] ? "#{@applied_summary[:low_away_ratio]}%" : "--"
+            %td.task-duration{ "data-label": "施策なし" }= @others_summary[:low_away_ratio] ? "#{@others_summary[:low_away_ratio]}%" : "--"
+          %tr
+            %td.task-name{ "data-label": "指標" } 平均中断回数
+            %td.task-duration{ "data-label": "施策あり" }= @applied_summary[:avg_interrupt_count] || "--"
+            %td.task-duration{ "data-label": "施策なし" }= @others_summary[:avg_interrupt_count] || "--"
+
+  - if @applied_metrics && @others_metrics
+    %section.panel.report-section
+      %h2.report-section__title 5指標の比較
+      .report-chart
+        %canvas{ data: { controller: "report-chart",
+                         report_chart_labels_value: @applied_metrics.keys.to_json,
+                         report_chart_datasets_value: [{ label: "施策あり", data: @applied_metrics.values, backgroundColor: "#2dd4a7" }, { label: "施策なし", data: @others_metrics.values, backgroundColor: "#828c9b" }].to_json,
+                         report_chart_suggested_max_value: 100 } }
