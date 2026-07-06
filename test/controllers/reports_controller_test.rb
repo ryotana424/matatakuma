@@ -78,4 +78,14 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "timeout", session.ended_reason
     assert_equal session.last_seen_at.to_i, session.ended_at.to_i
   end
+
+  test "日次レポートに時間帯別グラフとタスク別サマリーを表示する" do
+    get report_url(date: "2026-06-26")
+
+    assert_response :success
+    assert_select "h2", text: "時間帯別の集中"
+    assert_select "canvas[data-controller=?]", "report-chart"
+    assert_select "h2", text: "タスク別サマリー"
+    assert_select "td", text: "作業"
+  end
 end

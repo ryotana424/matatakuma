@@ -14,6 +14,8 @@ class ReportsController < ApplicationController
     @total_duration = summary[:total_duration_sec]
     @low_away_ratio = summary[:low_away_ratio]
     @weakest_metric = SessionAnalytics.weakest_metric(@sessions)
+    @hourly_focus = SessionAnalytics.hourly_focus(@sessions)
+    @task_summaries = SessionAnalytics.task_summaries(@sessions)
   end
 
   def update

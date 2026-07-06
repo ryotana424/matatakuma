@@ -25,6 +25,41 @@
       %strong.report-stat__value= @weakest_metric ? "#{@weakest_metric[:label]} #{@weakest_metric[:value]}%" : "--"
 
   %section.panel.report-section
+    %h2.report-section__title 時間帯別の集中
+    - if @sessions.any?
+      -# セッション平均スコアを在席時間で按分した近似値（時間帯内の変動は保存していない）
+      .report-chart
+        %canvas{ data: { controller: "report-chart",
+                         report_chart_labels_value: (0..23).map { |hour| "#{hour}時" }.to_json,
+                         report_chart_datasets_value: [{ label: "平均スコア", data: @hourly_focus.map { |bucket| bucket[:avg_score] }, backgroundColor: "#2dd4a7" }].to_json,
+                         report_chart_suggested_max_value: 100 } }
+      %p.report-empty ※ セッションの平均スコアを在席時間で按分した近似値です。
+    - else
+      %p.report-empty この日のセッションはありません。
+
+  %section.panel.report-section
+    %h2.report-section__title タスク別サマリー
+    - if @task_summaries.any?
+      %table.task-table.report-session-table
+        %thead
+          %tr
+            %th タスク
+            %th セッション数
+            %th 平均スコア
+            %th 計測時間
+            %th 中断合計
+        %tbody
+          - @task_summaries.each do |summary|
+            %tr
+              %td.task-name{ "data-label": "タスク" }= summary[:task_name]
+              %td.task-duration{ "data-label": "セッション数" }= summary[:count]
+              %td.task-duration{ "data-label": "平均スコア" }= summary[:avg_score]
+              %td.task-duration{ "data-label": "計測時間" }= format_duration(summary[:total_duration_sec])
+              %td.task-duration{ "data-label": "中断合計" }= summary[:interrupt_count]
+    - else
+      %p.report-empty この日のセッションはありません。
+
+  %section.panel.report-section
     %h2.report-section__title セッション内訳
     - if @sessions.any?
       %table.task-table.report-session-table
