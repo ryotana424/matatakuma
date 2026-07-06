@@ -1,7 +1,7 @@
 class Task < ApplicationRecord
   has_many :sessions, dependent: :destroy
 
-  enum :status, { todo: 0, doing: 1, done: 2 }, default: :todo
+  enum :status, { todo: 0, doing: 1, done: 2, archived: 3, interrupted: 4 }, default: :todo
 
   validates :name, presence: true
 

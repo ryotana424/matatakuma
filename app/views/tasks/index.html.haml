@@ -1,7 +1,8 @@
 - content_for(:title) { "タスク一覧 | Focus Pulse" }
 
--# ステータスenum値（todo/doing/done）→ 日本語ラベルへの対応表
-- status_labels = { "todo" => "未着手", "doing" => "計測中", "done" => "完了" }
+-# ステータスenum値（todo/doing/done/archived/interrupted）→ 日本語ラベルへの対応表
+- status_labels = { "todo" => "未着手", "doing" => "着手中", "done" => "完了", "archived" => "アーカイブ", "interrupted" => "中断" }
+- status_action_options = [["着手中", "doing"], ["完了", "done"], ["アーカイブ", "archived"], ["中断", "interrupted"]]
 
 .page-head
   %h1.page-title タスク一覧
@@ -27,13 +28,18 @@
         %tr
           %td.task-name{ "data-label": "タスク" }= task.name
           %td{ "data-label": "状態" }
-            %span.status-pill{ class: "status-pill--#{task.status}" }= status_labels[task.status]
+            - if task.sessions.exists?
+              = form_with model: task, url: task_path(task), method: :patch, class: "task-status-form" do |f|
+                = f.select :status, status_action_options, { selected: task.status }, class: "status-pill task-status-select status-pill--#{task.status}", "aria-label": "#{task.name}の状態", onchange: "this.form.requestSubmit()"
+            - else
+              %span.status-pill{ class: "status-pill--#{task.status}" }= status_labels[task.status]
           %td.task-duration{ "data-label": "計測時間合計" }= format_duration(task.total_duration_sec)
           %td{ "data-label": "操作" }
-            = link_to measure_task_path(task), class: "measure-link" do
-              %svg{ width: "15", height: "15", viewBox: "0 0 24 24", fill: "currentColor", "aria-hidden": "true" }
-                %path{ d: "M8 5v14l11-7z" }
-              計測開始
+            .task-actions
+              = link_to measure_task_path(task), class: "measure-link" do
+                %svg{ width: "15", height: "15", viewBox: "0 0 24 24", fill: "currentColor", "aria-hidden": "true" }
+                  %path{ d: "M8 5v14l11-7z" }
+                計測開始
 - else
   .panel.empty-state
     %p.empty-state__title まだタスクがありません

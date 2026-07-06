@@ -19,6 +19,24 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     assert_not_nil session.last_seen_at
   end
 
+  test "初回計測開始時にタスクを着手中にする" do
+    assert @task.todo?
+
+    post task_sessions_url(@task), params: { session: { started_at: "2026-06-26T10:00:00" } }, as: :json
+
+    assert_response :created
+    assert @task.reload.doing?
+  end
+
+  test "完了済みタスクで追加計測しても状態を戻さない" do
+    @task.update!(status: :done)
+
+    post task_sessions_url(@task), params: { session: { started_at: "2026-06-26T10:00:00" } }, as: :json
+
+    assert_response :created
+    assert @task.reload.done?
+  end
+
   test "計測中の集計値をrunningセッションへ上書き保存する" do
     session = @task.sessions.create!(started_at: Time.zone.local(2026, 6, 26, 10),
                                      duration_sec: 0, avg_score: 0,

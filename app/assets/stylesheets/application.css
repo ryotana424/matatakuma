@@ -34,6 +34,8 @@
   --status-todo: #7c8898;
   --status-doing: #2dd4a7;
   --status-done: #5b8def;
+  --status-archived: #8b94a7;
+  --status-interrupted: #ff9a8b;
 
   /* エラー・危険を表す色（バリデーションエラー等で全画面共通利用） */
   --danger: #ff9a8b;
@@ -518,8 +520,37 @@ a { color: var(--accent); text-decoration: none; }
 .status-pill--todo  { color: var(--status-todo);  border-color: rgba(124, 136, 152, 0.4); }
 .status-pill--doing { color: var(--status-doing); border-color: rgba(45, 212, 167, 0.4); background: var(--accent-soft); }
 .status-pill--done  { color: var(--status-done);  border-color: rgba(91, 141, 239, 0.4); }
+.status-pill--archived { color: var(--status-archived); border-color: rgba(139, 148, 167, 0.42); }
+.status-pill--interrupted { color: var(--status-interrupted); border-color: rgba(255, 154, 139, 0.48); }
 
 /* 計測開始リンク */
+.task-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.task-status-form {
+  display: inline-flex;
+}
+
+.task-status-select {
+  min-width: 120px;
+  appearance: none;
+  cursor: pointer;
+  background-image: linear-gradient(45deg, transparent 50%, currentColor 50%),
+                    linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-position: calc(100% - 14px) 50%, calc(100% - 9px) 50%;
+  background-repeat: no-repeat;
+  background-size: 5px 5px, 5px 5px;
+  padding-right: 28px;
+}
+
+.task-status-select.status-pill--doing {
+  background-color: var(--accent-soft);
+}
+
 .measure-link {
   display: inline-flex;
   align-items: center;

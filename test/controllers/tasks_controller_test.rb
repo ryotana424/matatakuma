@@ -17,6 +17,36 @@ class TasksControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to tasks_url
   end
 
+  test "計測済みタスクを完了に変更できる" do
+    task = Task.create!(name: "資料作成", status: :doing)
+    task.sessions.create!(started_at: Time.current, duration_sec: 60)
+
+    patch task_url(task), params: { task: { status: "done" } }
+
+    assert_redirected_to tasks_url
+    assert task.reload.done?
+  end
+
+  test "計測済みタスクをアーカイブに変更できる" do
+    task = Task.create!(name: "古い作業", status: :doing)
+    task.sessions.create!(started_at: Time.current, duration_sec: 60)
+
+    patch task_url(task), params: { task: { status: "archived" } }
+
+    assert_redirected_to tasks_url
+    assert task.reload.archived?
+  end
+
+  test "計測済みタスクを中断に変更できる" do
+    task = Task.create!(name: "保留作業", status: :doing)
+    task.sessions.create!(started_at: Time.current, duration_sec: 60)
+
+    patch task_url(task), params: { task: { status: "interrupted" } }
+
+    assert_redirected_to tasks_url
+    assert task.reload.interrupted?
+  end
+
   test "計測時間合計が表示される" do
     task = Task.create!(name: "コーディング")
     task.sessions.create!(started_at: Time.current, ended_at: Time.current, duration_sec: 3661, avg_score: 80,
@@ -25,13 +55,54 @@ class TasksControllerTest < ActionDispatch::IntegrationTest
     assert_select "body", /1:01:01/
   end
 
+  test "計測済みタスクは状態欄のプルダウンで変更できる" do
+    task = Task.create!(name: "コーディング", status: :doing)
+    task.sessions.create!(started_at: Time.current, duration_sec: 60)
+
+    get tasks_url
+
+    assert_select "td[data-label='状態'] form[action='#{task_path(task)}'] select[name='task[status]'][onchange='this.form.requestSubmit()']"
+    assert_select "option[value=doing][selected=selected]", "着手中"
+    assert_select "option[value=done]", "完了"
+    assert_select "option[value=archived]", "アーカイブ"
+    assert_select "option[value=interrupted]", "中断"
+    assert_select "td[data-label='操作'] form[action='#{task_path(task)}']", count: 0
+  end
+
+  test "未計測タスクは状態欄に表示だけ出す" do
+    Task.create!(name: "未計測")
+
+    get tasks_url
+
+    assert_select "td[data-label='状態'] .status-pill", "未着手"
+    assert_select "td[data-label='状態'] select[name='task[status]']", count: 0
+  end
+
   test "計測画面が表示できる" do
     task = Task.create!(name: "計測タスク")
     get measure_task_url(task)
     assert_response :success
-    assert_select "body", /計測中: 計測タスク/
+    assert_select "h1.page-title", "計測タスク"
+    assert_select "body", { text: /計測中: 計測タスク/, count: 0 }
     assert_select "button", { text: /計測開始/, count: 0 }
     assert_select "button", /計測終了して保存/
+  end
+
+  test "計測画面にこのセッション平均と前回セッション平均が表示される" do
+    task = Task.create!(name: "計測タスク")
+    older = task.sessions.create!(started_at: 2.hours.ago, ended_at: 1.hour.ago,
+                                  duration_sec: 3600, avg_score: 71, status: :completed)
+    task.sessions.create!(started_at: 30.minutes.ago, ended_at: 5.minutes.ago,
+                          duration_sec: 1500, avg_score: 84, status: :completed)
+    task.sessions.create!(started_at: 1.minute.ago, duration_sec: 0,
+                          avg_score: 10, status: :running)
+
+    get measure_task_url(task)
+
+    assert_response :success
+    assert_select "[data-measure-target='sessionAverage']", "--"
+    assert_select ".measure-breakdown__item", text: /前回セッション平均\s+84/
+    assert_not_includes response.body, ">#{older.avg_score}<"
   end
 
   test "計測画面に施策ドロップダウンが表示される" do

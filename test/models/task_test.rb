@@ -12,6 +12,10 @@ class TaskTest < ActiveSupport::TestCase
     assert_equal "todo", task.status
   end
 
+  test "statusは未着手・着手中・完了・アーカイブ・中断を持つ" do
+    assert_equal %w[todo doing done archived interrupted], Task.statuses.keys
+  end
+
   test "計測時間合計をsessionsから算出できる" do
     task = Task.create!(name: "コーディング")
     task.sessions.create!(started_at: Time.current, ended_at: Time.current, duration_sec: 600, avg_score: 80,

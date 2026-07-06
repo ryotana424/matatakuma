@@ -15,6 +15,7 @@ class SessionsController < ApplicationController
     @session.last_seen_at ||= Time.current
 
     if @session.save
+      @task.doing! if @task.todo?
       render json: @session, status: :created
     else
       render json: { errors: @session.errors.full_messages }, status: :unprocessable_entity
