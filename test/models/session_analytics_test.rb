@@ -101,6 +101,17 @@ class SessionAnalyticsTest < ActiveSupport::TestCase
     assert_nil hourly[11][:avg_score]
   end
 
+  test "hourly_focusは日をまたぐセッションの翌日分も同じ時刻バケツに按分する" do
+    session = build_session(started_at: Time.zone.local(2026, 7, 6, 23, 30),
+                            ended_at: Time.zone.local(2026, 7, 7, 0, 45), avg_score: 40)
+
+    hourly = SessionAnalytics.hourly_focus([session])
+
+    assert_equal 40, hourly[23][:avg_score]
+    assert_equal 40, hourly[0][:avg_score]
+    assert_nil hourly[1][:avg_score]
+  end
+
   test "hourly_focusは空配列で全時間帯nilを返す" do
     hourly = SessionAnalytics.hourly_focus([])
 
