@@ -10,8 +10,15 @@ const CAMERA_DEVICE_COOKIE_MAX_AGE = 60 * 60 * 24 * 180
 
 // 映像解析はブラウザ内で完結し、終了時に集計値だけをPOSTする。
 export default class extends Controller {
-  static targets = ["video", "canvas", "score", "state", "stopBtn", "placeholder", "message", "cameraSelect", "pulseCanvas", "blinkCount", "sessionAverage", "interventionSelect"]
-  static values = { taskId: Number, createUrl: String }
+  static targets = ["video", "canvas", "score", "state", "stopBtn", "placeholder", "message", "cameraSelect", "pulseCanvas", "blinkCount", "sessionAverage", "interventionSelect", "dailyDuration", "dailyFocusVolume", "dailyAverage"]
+  static values = {
+    taskId: Number,
+    createUrl: String,
+    dailyBaseDurationSec: Number,
+    dailyBaseVolume: Number,
+    dailyBaseScoreSum: Number,
+    dailyBaseSessionCount: Number,
+  }
 
   connect() {
     this.frameBuffer = []
@@ -176,6 +183,8 @@ export default class extends Controller {
   }
 
   sampleOnce() {
+    this.updateDailyStatus()
+
     if (isFaceTemporarilyAbsent(this.frameBuffer)) {
       this.scoreTarget.textContent = "--"
       this.stateTarget.textContent = this.stateLabel("interrupted")
@@ -231,6 +240,46 @@ export default class extends Controller {
 
     const average = averageFocusableScore(this.samples)
     this.sessionAverageTarget.textContent = average
+  }
+
+  // 本日ステータスバーを「保存済みセッションの集計＋計測中セッションの見込み値」で更新する。
+  // 計測中セッションは経過秒数と離席を除いた現在平均から算出する
+  updateDailyStatus() {
+    if (!this.hasDailyDurationTarget || !this.startedAt) return
+
+    const elapsedSec = Math.max(0, Math.floor((Date.now() - this.startedAt.getTime()) / 1000))
+    const currentAvg = this.samples.length > 0 ? averageFocusableScore(this.samples) : null
+
+    this.dailyDurationTarget.textContent = this.formatDuration(this.dailyBaseDurationSecValue + elapsedSec)
+
+    const count = this.dailyBaseSessionCountValue + (currentAvg === null ? 0 : 1)
+    if (count === 0) {
+      this.dailyFocusVolumeTarget.textContent = "--"
+      this.dailyAverageTarget.textContent = "--"
+      return
+    }
+
+    const currentVolume = currentAvg === null ? 0 : (currentAvg * elapsedSec) / 60
+    this.dailyFocusVolumeTarget.textContent = this.formatFocusVolume(this.dailyBaseVolumeValue + currentVolume)
+
+    const scoreSum = this.dailyBaseScoreSumValue + (currentAvg ?? 0)
+    this.dailyAverageTarget.textContent = String(Math.round(scoreSum / count))
+  }
+
+  // 秒数を H:MM:SS へ整形（ApplicationHelper#format_duration と同じ表記）
+  formatDuration(totalSec) {
+    const sec = Math.floor(totalSec)
+    const h = Math.floor(sec / 3600)
+    const m = Math.floor((sec % 3600) / 60)
+    const s = sec % 60
+    return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`
+  }
+
+  // 1000以上を k / 1000000以上を m 表記（ApplicationHelper#format_focus_volume と同じ表記）
+  formatFocusVolume(value) {
+    if (Math.abs(value) >= 1_000_000) return `${Math.round((value / 1_000_000) * 10) / 10}m`
+    if (Math.abs(value) >= 1_000) return `${Math.round((value / 1_000) * 10) / 10}k`
+    return String(Math.round(value))
   }
 
   isDebugModeEnabled() {

@@ -1,6 +1,16 @@
 - content_for(:title) { "#{@task.name} | Focus Pulse" }
 
-.measure-page{ data: { controller: "measure", measure_task_id_value: @task.id, measure_create_url_value: task_sessions_path(@task) } }
+-# 日次ステータスバーのライブ更新用ベース値（保存済み完了セッションの集計）
+- daily_summary = SessionAnalytics.summary(@daily_sessions)
+- daily_volume = SessionAnalytics.focus_volume(@daily_sessions) || 0
+
+.measure-page{ data: { controller: "measure",
+                       measure_task_id_value: @task.id,
+                       measure_create_url_value: task_sessions_path(@task),
+                       measure_daily_base_duration_sec_value: daily_summary[:total_duration_sec],
+                       measure_daily_base_volume_value: daily_volume,
+                       measure_daily_base_score_sum_value: @daily_sessions.sum(&:avg_score),
+                       measure_daily_base_session_count_value: @daily_sessions.size } }
   .page-head.measure-head
     %div
       %p.measure-kicker MEASUREMENT
