@@ -55,3 +55,5 @@
           %strong{ data: { measure_target: "blinkCount" } } 0
 
   = render "status_bar", daily_sessions: @daily_sessions
+
+  = render "task_list", tasks: @tasks, form_task: @new_task, current_task: @task

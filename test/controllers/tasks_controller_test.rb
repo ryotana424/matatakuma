@@ -202,4 +202,17 @@ class TasksControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select ".daily-status-bar"
   end
+
+  test "計測ページにタスク一覧が表示され計測中タスクにはリンクが出ない" do
+    task = Task.create!(name: "計測対象")
+    Task.create!(name: "別タスク")
+
+    get measure_task_url(task)
+
+    assert_response :success
+    assert_select ".task-panel .task-table"
+    assert_select "body", /別タスク/
+    # 計測中の行は「計測中」ラベルになり計測開始リンクを出さない
+    assert_select ".measure-link--current", "計測中"
+  end
 end
