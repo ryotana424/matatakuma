@@ -26,4 +26,11 @@ class SessionInterventionsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to report_url(date: "2026-06-26")
     assert_nil @session.reload.intervention_id
   end
+
+  test "存在しない施策IDならレポートへ戻し施策は変更しない" do
+    patch session_intervention_url(@session), params: { session: { intervention_id: 999_999 } }
+
+    assert_redirected_to report_url(date: "2026-06-26")
+    assert_nil @session.reload.intervention_id
+  end
 end
