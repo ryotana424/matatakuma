@@ -137,4 +137,16 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     assert_response :ok
     assert_nil session.reload.intervention_id
   end
+
+  test "存在しない施策IDでは422エラーを返す" do
+    session = @task.sessions.create!(started_at: Time.zone.local(2026, 6, 26, 10),
+                                     status: :running, last_seen_at: Time.zone.local(2026, 6, 26, 10),
+                                     save_count: 0)
+
+    patch task_session_url(@task, session),
+          params: { session: { duration_sec: 60, avg_score: 70, intervention_id: 999_999 } }, as: :json
+
+    assert_response :unprocessable_entity
+    assert_nil session.reload.intervention_id
+  end
 end

@@ -2,6 +2,12 @@ class SessionsController < ApplicationController
   # ローカル専用アプリかつJSON APIのためCSRFトークン検証はスキップ
   skip_before_action :verify_authenticity_token
 
+  # 施策が削除された後の古いドロップダウン値などで存在しないIDが来た場合も、
+  # 他の不正値と同じく422のエラーJSONで返す
+  rescue_from ActiveRecord::InvalidForeignKey do
+    render json: { errors: ["施策が見つかりません"] }, status: :unprocessable_entity
+  end
+
   def create
     @task = Task.find(params[:task_id])
     @session = @task.sessions.build(start_params)
