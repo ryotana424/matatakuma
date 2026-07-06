@@ -8,7 +8,7 @@ const source = readFileSync(join(currentDir, "measure_controller.js"), "utf8")
 
 assert.equal(source.includes(".drawImage("), false, "カメラ映像をcanvasへ描画しない")
 assert.equal(source.includes("drawPrivacySurface"), true, "匿名化された表示面を描画する")
-assert.equal(source.includes("static targets = [\"video\", \"canvas\", \"score\", \"state\", \"stopBtn\", \"placeholder\", \"message\", \"cameraSelect\", \"pulseCanvas\", \"blinkCount\"]"), true, "カメラ選択と波形canvasのtargetを持つ")
+assert.equal(source.includes("static targets = [\"video\", \"canvas\", \"score\", \"state\", \"stopBtn\", \"placeholder\", \"message\", \"cameraSelect\", \"pulseCanvas\", \"blinkCount\", \"interventionSelect\"]"), true, "カメラ選択・波形canvas・施策選択のtargetを持つ")
 assert.equal(source.includes("this.start()"), true, "画面表示時に自動で計測開始する")
 assert.equal(source.includes("enumerateDevices()"), true, "利用可能なカメラを列挙する")
 assert.equal(source.includes("deviceId: { exact: deviceId }"), true, "選択したカメラIDで起動する")
@@ -26,5 +26,8 @@ assert.equal(source.includes("this.sessionId = null"), true, "開始時に作成
 assert.equal(source.includes("this.autosaveTick = setInterval(() => this.saveProgress(), 15000)"), true, "計測中に定期保存する")
 assert.equal(source.includes("await this.createSession()"), true, "計測開始時にrunningセッションを作成する")
 assert.equal(source.includes("await this.saveProgress({ completed: true })"), true, "停止時にcompletedとして最終保存する")
+
+assert.equal(source.includes("payload.intervention_id = this.selectedInterventionId()"), true, "定期保存と終了保存で選択中の施策IDを送る")
+assert.equal(source.includes("return value === \"\" ? null : Number(value)"), true, "施策未選択はnullとして送り紐付けを外せる")
 
 console.log("measure controller privacy display OK")

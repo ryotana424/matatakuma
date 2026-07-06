@@ -22,6 +22,7 @@ class TasksController < ApplicationController
 
   def measure
     @task = Task.find(params[:id])
+    @interventions = Intervention.order(created_at: :desc)
   end
 
   private

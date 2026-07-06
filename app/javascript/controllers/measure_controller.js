@@ -10,7 +10,7 @@ const CAMERA_DEVICE_COOKIE_MAX_AGE = 60 * 60 * 24 * 180
 
 // 映像解析はブラウザ内で完結し、終了時に集計値だけをPOSTする。
 export default class extends Controller {
-  static targets = ["video", "canvas", "score", "state", "stopBtn", "placeholder", "message", "cameraSelect", "pulseCanvas", "blinkCount"]
+  static targets = ["video", "canvas", "score", "state", "stopBtn", "placeholder", "message", "cameraSelect", "pulseCanvas", "blinkCount", "interventionSelect"]
   static values = { taskId: Number, createUrl: String }
 
   connect() {
@@ -222,11 +222,19 @@ export default class extends Controller {
     this.sessionId = body.id
   }
 
+  // 計測画面で選択中の施策ID。未選択（空文字）はnullを送り、セッションの紐付けを外す
+  selectedInterventionId() {
+    if (!this.hasInterventionSelectTarget) return null
+    const value = this.interventionSelectTarget.value
+    return value === "" ? null : Number(value)
+  }
+
   async saveProgress({ completed = false } = {}) {
     if (!this.sessionId || !this.startedAt) return true
 
     const now = new Date()
     const payload = aggregateSession(this.samples, this.startedAt, now)
+    payload.intervention_id = this.selectedInterventionId()
     if (completed) {
       payload.status = "completed"
       payload.ended_reason = "stopped"
