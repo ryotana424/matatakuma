@@ -1,5 +1,6 @@
 class Session < ApplicationRecord
   belongs_to :task
+  belongs_to :intervention, optional: true
 
   enum :status, { running: 0, completed: 1, interrupted: 2 }
 

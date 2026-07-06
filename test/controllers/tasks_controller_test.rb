@@ -33,4 +33,15 @@ class TasksControllerTest < ActionDispatch::IntegrationTest
     assert_select "button", { text: /計測開始/, count: 0 }
     assert_select "button", /計測終了して保存/
   end
+
+  test "計測画面に施策ドロップダウンが表示される" do
+    task = Task.create!(name: "計測タスク")
+    Intervention.create!(name: "ポモドーロ")
+
+    get measure_task_url(task)
+
+    assert_response :success
+    assert_select "select#measure-intervention-select option", text: "施策なし"
+    assert_select "select#measure-intervention-select option", text: "ポモドーロ"
+  end
 end

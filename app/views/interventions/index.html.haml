@@ -1,0 +1,35 @@
+- content_for(:title) { "施策一覧 | Focus Pulse" }
+
+= turbo_frame_tag "modal" do
+  .page-head
+    %h1.page-title 施策一覧
+    %p.page-lead
+      集中力改善のために試す施策を登録し、適用したセッションと非適用セッションを比較します。
+
+  %section.panel.report-section
+    %h2.report-section__title 施策を追加
+    = form_with model: @intervention, url: interventions_path, class: "report-form" do |f|
+      .report-form__field
+        = f.label :name, "施策名"
+        = f.text_field :name, class: "input", placeholder: "例: ポモドーロ（25分作業+5分休憩）"
+        - if @intervention.errors[:name].present?
+          %span.field-error= "施策名#{@intervention.errors[:name].first}"
+      .report-form__field
+        = f.label :description, "説明"
+        = f.text_area :description, rows: 2, class: "input report-textarea"
+      = f.submit "追加", class: "btn btn--primary"
+
+  - if @interventions.any?
+    .report-list
+      - @interventions.each do |intervention|
+        = link_to intervention_path(intervention), class: "panel report-date-card" do
+          %span.report-date-card__date= intervention.name
+          %span.report-date-card__label= "適用セッション #{@session_counts[intervention.id].to_i}件"
+  - else
+    .panel.empty-state
+      %p.empty-state__title まだ施策はありません
+      %p 施策を追加し、計測画面で選択すると効果を比較できます。
+
+  %footer.page-foot
+    = link_to "タスク一覧へ", tasks_path, class: "btn btn--ghost", data: { turbo_frame: "_top" }
+    = link_to "日次レポートへ", reports_path, class: "btn btn--ghost"

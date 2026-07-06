@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_06_30_000100) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_06_000100) do
   create_table "daily_reports", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.text "measure_note"
@@ -18,6 +18,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_30_000100) do
     t.date "report_date", null: false
     t.datetime "updated_at", null: false
     t.index ["report_date"], name: "index_daily_reports_on_report_date", unique: true
+  end
+
+  create_table "interventions", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.text "description"
+    t.string "name", null: false
+    t.datetime "updated_at", null: false
+    t.index ["name"], name: "index_interventions_on_name", unique: true
   end
 
   create_table "sessions", force: :cascade do |t|
@@ -33,6 +41,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_30_000100) do
     t.float "head_stable_ratio", default: 0.0, null: false
     t.float "high_ratio", default: 0.0, null: false
     t.integer "interrupt_count", default: 0, null: false
+    t.integer "intervention_id"
     t.datetime "last_seen_at"
     t.integer "longest_away_streak_sec", default: 0, null: false
     t.integer "longest_low_streak_sec", default: 0, null: false
@@ -47,6 +56,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_30_000100) do
     t.integer "status", default: 0, null: false
     t.integer "task_id", null: false
     t.datetime "updated_at", null: false
+    t.index ["intervention_id"], name: "index_sessions_on_intervention_id"
     t.index ["task_id"], name: "index_sessions_on_task_id"
   end
 
@@ -57,5 +67,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_30_000100) do
     t.datetime "updated_at", null: false
   end
 
+  add_foreign_key "sessions", "interventions"
   add_foreign_key "sessions", "tasks"
 end

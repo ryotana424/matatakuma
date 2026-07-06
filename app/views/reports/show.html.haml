@@ -5,7 +5,9 @@
     %div
       %p.measure-kicker DAILY REPORT
       %h1.page-title= "#{@date.iso8601} のレポート"
-    = link_to "レポート一覧へ", reports_path, class: "btn btn--ghost"
+    %div
+      = link_to "施策一覧へ", interventions_path, class: "btn btn--ghost"
+      = link_to "レポート一覧へ", reports_path, class: "btn btn--ghost"
 
   .report-summary-grid
     .panel.report-stat
@@ -25,6 +27,41 @@
       %strong.report-stat__value= @weakest_metric ? "#{@weakest_metric[:label]} #{@weakest_metric[:value]}%" : "--"
 
   %section.panel.report-section
+    %h2.report-section__title 時間帯別の集中
+    - if @sessions.any?
+      -# セッション平均スコアを在席時間で按分した近似値（時間帯内の変動は保存していない）
+      .report-chart
+        %canvas{ data: { controller: "report-chart",
+                         report_chart_labels_value: (0..23).map { |hour| "#{hour}時" }.to_json,
+                         report_chart_datasets_value: [{ label: "平均スコア", data: @hourly_focus.map { |bucket| bucket[:avg_score] }, backgroundColor: "#2dd4a7" }].to_json,
+                         report_chart_suggested_max_value: 100 } }
+      %p.report-empty ※ セッションの平均スコアを在席時間で按分した近似値です。
+    - else
+      %p.report-empty この日のセッションはありません。
+
+  %section.panel.report-section
+    %h2.report-section__title タスク別サマリー
+    - if @task_summaries.any?
+      %table.task-table.report-session-table
+        %thead
+          %tr
+            %th タスク
+            %th セッション数
+            %th 平均スコア
+            %th 計測時間
+            %th 中断合計
+        %tbody
+          - @task_summaries.each do |summary|
+            %tr
+              %td.task-name{ "data-label": "タスク" }= summary[:task_name]
+              %td.task-duration{ "data-label": "セッション数" }= summary[:count]
+              %td.task-duration{ "data-label": "平均スコア" }= summary[:avg_score]
+              %td.task-duration{ "data-label": "計測時間" }= format_duration(summary[:total_duration_sec])
+              %td.task-duration{ "data-label": "中断合計" }= summary[:interrupt_count]
+    - else
+      %p.report-empty この日のセッションはありません。
+
+  %section.panel.report-section
     %h2.report-section__title セッション内訳
     - if @sessions.any?
       %table.task-table.report-session-table
@@ -36,6 +73,7 @@
             %th 中断
             %th 内訳
             %th 最長低下
+            %th 施策
         %tbody
           - @sessions.each do |session|
             %tr
@@ -45,6 +83,10 @@
               %td.task-duration{ "data-label": "中断" }= session.interrupt_count
               %td.task-duration{ "data-label": "内訳" }= "視線 #{(session.gaze_on_screen_ratio * 100).round}%"
               %td.task-duration{ "data-label": "最長低下" }= "低集中 #{session.longest_low_streak_sec}秒"
+              %td.task-duration{ "data-label": "施策" }
+                = form_with url: session_intervention_path(session), method: :patch, class: "report-intervention-form" do
+                  = select_tag "session[intervention_id]", options_from_collection_for_select(@interventions, :id, :name, session.intervention_id), include_blank: "なし", class: "input report-intervention-form__select"
+                  = submit_tag "更新", class: "btn btn--ghost", name: nil
     - else
       %p.report-empty この日のセッションはありません。
 

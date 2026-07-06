@@ -23,7 +23,6 @@
     = stylesheet_link_tag :application, "data-turbo-track": "reload"
     %script{ src: "https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" }
     %script{ src: "https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" }
-    %script{ src: "https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" }
     = javascript_importmap_tags
 
   %body
@@ -40,6 +39,7 @@
         %nav.app-nav{ "aria-label": "グローバルナビゲーション" }
           = link_to "説明", about_path, class: "app-nav-link", data: { turbo_frame: "modal" }
           = link_to "日次レポート", reports_path, class: "app-nav-link", data: { turbo_frame: "modal" }
+          = link_to "施策", interventions_path, class: "app-nav-link", data: { turbo_frame: "modal" }
 
       - if notice.present?
         .flash= notice
