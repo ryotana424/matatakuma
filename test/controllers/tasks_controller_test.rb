@@ -71,6 +71,22 @@ class TasksControllerTest < ActionDispatch::IntegrationTest
     assert_select "td[data-label='平均集中スコア']", "78"
   end
 
+  test "タスク一覧に集中度総量が平均集中スコアの左に表示される" do
+    task = Task.create!(name: "コーディング")
+    task.sessions.create!(started_at: 2.hours.ago, ended_at: 1.hour.ago, duration_sec: 1200, avg_score: 70,
+                          high_ratio: 0.5, medium_ratio: 0.3, low_ratio: 0.1, away_ratio: 0.1, interrupt_count: 0,
+                          status: :completed)
+    task.sessions.create!(started_at: 30.minutes.ago, ended_at: 5.minutes.ago, duration_sec: 600, avg_score: 90,
+                          high_ratio: 0.5, medium_ratio: 0.3, low_ratio: 0.1, away_ratio: 0.1, interrupt_count: 0,
+                          status: :completed)
+
+    get tasks_url
+
+    assert_select "thead th:nth-child(4)", "集中度総量"
+    assert_select "thead th:nth-child(5)", "平均集中スコア"
+    assert_select "td[data-label='集中度総量']", "2.4k"
+  end
+
   test "計測済みタスクは状態欄のプルダウンで変更できる" do
     task = Task.create!(name: "コーディング", status: :doing)
     task.sessions.create!(started_at: Time.current, duration_sec: 60)
