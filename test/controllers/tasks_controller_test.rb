@@ -147,4 +147,24 @@ class TasksControllerTest < ActionDispatch::IntegrationTest
     assert_select "select#measure-intervention-select option", text: "施策なし"
     assert_select "select#measure-intervention-select option", text: "ポモドーロ"
   end
+
+  test "一覧ページにタスク追加モーダルが閉じた状態で含まれる" do
+    get tasks_url
+    assert_response :success
+    assert_select ".task-panel[data-task-modal-open-value='false']"
+    assert_select ".task-modal form input[name='task[name]']"
+    assert_select "button", /タスク追加/
+  end
+
+  test "作成失敗時はモーダルが開いた状態で一覧を再表示する" do
+    post tasks_url, params: { task: { name: "" } }
+    assert_response :unprocessable_entity
+    assert_select ".task-panel[data-task-modal-open-value='true']"
+    assert_select ".field-error"
+  end
+
+  test "一覧ページにカメラプレースホルダーが表示される" do
+    get tasks_url
+    assert_select ".measure-camera__empty", /タスクを選んで計測開始/
+  end
 end

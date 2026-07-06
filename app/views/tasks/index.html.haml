@@ -1,53 +1,20 @@
-- content_for(:title) { "タスク一覧 | Focus Pulse" }
+- content_for(:title) { "Focus Pulse" }
 
--# ステータスenum値（todo/doing/done/archived/interrupted）→ 日本語ラベルへの対応表
-- status_labels = { "todo" => "未着手", "doing" => "着手中", "done" => "完了", "archived" => "アーカイブ", "interrupted" => "中断" }
-- status_action_options = [["着手中", "doing"], ["完了", "done"], ["アーカイブ", "archived"], ["中断", "interrupted"]]
+.measure-page
+  .page-head.measure-head
+    %div
+      %p.measure-kicker MEASUREMENT
+      %h1.page-title 計測を始めましょう
+      %p.page-lead 下のタスク一覧から「計測開始」を押すとカメラ計測が始まります。
 
-.page-head
-  %h1.page-title タスク一覧
-  %p.page-lead
-    集中して取り組むタスクを登録し、計測を始めましょう。計測時間は自動で合計されます。
+  -# タスク未選択時のカメラプレースホルダー（計測はタスク選択後に開始）
+  %section.panel.measure-camera.measure-camera--idle{ "aria-label": "カメラ計測" }
+    .measure-canvas-wrap
+      .measure-camera__empty
+        %span.measure-camera__dot
+        %span タスクを選んで計測開始
 
-= form_with model: @task, url: tasks_path, class: "panel task-form" do |f|
-  = f.text_field :name, placeholder: "タスク名を入力", class: "input", autofocus: true, "aria-label": "タスク名"
-  = f.submit "追加", class: "btn btn--primary"
-  - if @task.errors[:name].present?
-    %span.field-error= "タスク名#{@task.errors[:name].first}"
-
-- if @tasks.any?
-  %table.task-table.panel
-    %thead
-      %tr
-        %th タスク
-        %th 状態
-        %th 計測時間合計
-        %th 集中度総量
-        %th 平均集中スコア
-        %th{ "aria-label": "操作" }
-    %tbody
-      - @tasks.each do |task|
-        %tr
-          %td.task-name{ "data-label": "タスク" }= task.name
-          %td{ "data-label": "状態" }
-            - if task.sessions.exists?
-              = form_with model: task, url: task_path(task), method: :patch, class: "task-status-form" do |f|
-                = f.select :status, status_action_options, { selected: task.status }, class: "status-pill task-status-select status-pill--#{task.status}", "aria-label": "#{task.name}の状態", onchange: "this.form.requestSubmit()"
-            - else
-              %span.status-pill{ class: "status-pill--#{task.status}" }= status_labels[task.status]
-          %td.task-duration{ "data-label": "計測時間合計" }= format_duration(task.total_duration_sec)
-          %td.task-duration{ "data-label": "集中度総量" }= task.focus_volume ? format_focus_volume(task.focus_volume) : "--"
-          %td.task-duration{ "data-label": "平均集中スコア" }= task.average_score || "--"
-          %td{ "data-label": "操作" }
-            .task-actions
-              = link_to measure_task_path(task), class: "measure-link" do
-                %svg{ width: "15", height: "15", viewBox: "0 0 24 24", fill: "currentColor", "aria-hidden": "true" }
-                  %path{ d: "M8 5v14l11-7z" }
-                計測開始
-- else
-  .panel.empty-state
-    %p.empty-state__title まだタスクがありません
-    %p 上のフォームから最初のタスクを追加してください。
+  = render "task_list", tasks: @tasks, form_task: @task, current_task: nil
 
 %footer.page-foot
   = link_to "日次レポートを見る", reports_path, class: "btn btn--ghost"
