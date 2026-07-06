@@ -61,6 +61,16 @@ const absentForThreeSecondsMetrics = computeMetrics([
 assert.equal(absentForThreeSecondsMetrics.facePresent, 0)
 assert.equal(calcScore(absentForThreeSecondsMetrics), 0)
 
+const longClosedEyesMetrics = computeMetrics([
+  { ts: 1000, faceDetected: true, gazeOnScreen: 1, headStable: 1, earLeft: 0.1, earRight: 0.1 },
+  { ts: 6000, faceDetected: true, gazeOnScreen: 1, headStable: 1, earLeft: 0.1, earRight: 0.1 },
+  { ts: 11000, faceDetected: true, gazeOnScreen: 1, headStable: 1, earLeft: 0.1, earRight: 0.1 },
+])
+
+assert.equal(longClosedEyesMetrics.closedEyesDurationMs, 10000)
+assert.equal(calcScore(longClosedEyesMetrics), 64)
+assert.equal(classifyState(calcScore(longClosedEyesMetrics), longClosedEyesMetrics.facePresent), "low")
+
 assert.equal(isFaceTemporarilyAbsent([
   { ts: 1000, faceDetected: true },
   { ts: 2000, faceDetected: true },

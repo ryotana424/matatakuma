@@ -1,10 +1,10 @@
-- content_for(:title) { "計測中: #{@task.name} | Focus Pulse" }
+- content_for(:title) { "#{@task.name} | Focus Pulse" }
 
 .measure-page{ data: { controller: "measure", measure_task_id_value: @task.id, measure_create_url_value: task_sessions_path(@task) } }
   .page-head.measure-head
     %div
       %p.measure-kicker MEASUREMENT
-      %h1.page-title= "計測中: #{@task.name}"
+      %h1.page-title= @task.name
     = link_to "タスク一覧へ戻る", tasks_path, class: "btn btn--ghost"
 
   .measure-grid
@@ -44,6 +44,12 @@
         %canvas.measure-pulse__canvas{ data: { measure_target: "pulseCanvas" }, width: "360", height: "96" }
 
       .measure-breakdown
+        .measure-breakdown__item
+          %span このセッション平均
+          %strong{ data: { measure_target: "sessionAverage" } } --
+        .measure-breakdown__item
+          %span 前回セッション平均
+          %strong= @previous_session&.avg_score || "--"
         .measure-breakdown__item
           %span 瞬き回数
           %strong{ data: { measure_target: "blinkCount" } } 0

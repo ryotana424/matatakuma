@@ -1,6 +1,8 @@
 // PoC index.html から移植したスコア計算（純粋関数）
 export const WEIGHTS = { gaze: 0.35, head: 0.25, face: 0.10, blink: 0.15, continuity: 0.15 }
 export const EAR_CLOSED_THRESH = 0.20
+export const CLOSED_EYES_LOW_AFTER_MS = 10000
+export const LOW_SCORE_MAX = 64
 const ABSENCE_GRACE_MS = 3000
 
 // frames: [{ faceDetected, gazeOnScreen, headStable, earLeft, earRight }]
@@ -24,6 +26,7 @@ export function computeMetrics(frames) {
   const closedFrames = detected.filter((d) => (d.earLeft + d.earRight) / 2 < EAR_CLOSED_THRESH).length
   const closedRatio = closedFrames / detected.length
   const blinkNormal = Math.max(0, 1 - closedRatio * 3.5)
+  const closedEyesDurationMs = currentClosedEyesDurationMs(frames)
 
   let interruptCount = 0
   for (let i = 0; i < total; i++) {
@@ -33,11 +36,28 @@ export function computeMetrics(frames) {
   }
   const sessionContinuity = Math.max(0, 1 - (interruptCount / total) * 1.6)
 
-  return { facePresent, gazeOnScreen, headStable, blinkNormal, sessionContinuity }
+  return { facePresent, gazeOnScreen, headStable, blinkNormal, sessionContinuity, closedEyesDurationMs }
 }
 
 function absentMetrics() {
-  return { facePresent: 0, gazeOnScreen: 0, headStable: 0, blinkNormal: 0, sessionContinuity: 0 }
+  return { facePresent: 0, gazeOnScreen: 0, headStable: 0, blinkNormal: 0, sessionContinuity: 0, closedEyesDurationMs: 0 }
+}
+
+function eyesClosed(frame) {
+  return frame.faceDetected && (frame.earLeft + frame.earRight) / 2 < EAR_CLOSED_THRESH
+}
+
+function currentClosedEyesDurationMs(frames) {
+  const latestFrame = frames[frames.length - 1]
+  if (!latestFrame || !eyesClosed(latestFrame) || !Number.isFinite(latestFrame.ts)) return 0
+
+  let firstClosedFrame = latestFrame
+  for (let i = frames.length - 2; i >= 0; i--) {
+    if (!eyesClosed(frames[i]) || !Number.isFinite(frames[i].ts)) break
+    firstClosedFrame = frames[i]
+  }
+
+  return latestFrame.ts - firstClosedFrame.ts
 }
 
 export function isFaceTemporarilyAbsent(frames) {
@@ -56,13 +76,15 @@ export function isFaceTemporarilyAbsent(frames) {
 }
 
 export function calcScore(metrics) {
-  return Math.round(100 * (
+  const score = Math.round(100 * (
     WEIGHTS.gaze * metrics.gazeOnScreen +
     WEIGHTS.head * metrics.headStable +
     WEIGHTS.face * metrics.facePresent +
     WEIGHTS.blink * metrics.blinkNormal +
     WEIGHTS.continuity * metrics.sessionContinuity
   ))
+  if (metrics.closedEyesDurationMs >= CLOSED_EYES_LOW_AFTER_MS) return Math.min(score, LOW_SCORE_MAX)
+  return score
 }
 
 export function classifyState(score, facePresent) {

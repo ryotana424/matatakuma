@@ -10,7 +10,7 @@ const CAMERA_DEVICE_COOKIE_MAX_AGE = 60 * 60 * 24 * 180
 
 // 映像解析はブラウザ内で完結し、終了時に集計値だけをPOSTする。
 export default class extends Controller {
-  static targets = ["video", "canvas", "score", "state", "stopBtn", "placeholder", "message", "cameraSelect", "pulseCanvas", "blinkCount", "interventionSelect"]
+  static targets = ["video", "canvas", "score", "state", "stopBtn", "placeholder", "message", "cameraSelect", "pulseCanvas", "blinkCount", "sessionAverage", "interventionSelect"]
   static values = { taskId: Number, createUrl: String }
 
   connect() {
@@ -61,6 +61,7 @@ export default class extends Controller {
       this.blinkCount = 0
       this.eyeClosed = false
       this.updateBlinkCount()
+      this.updateSessionAverage()
       this.stopBtnTarget.disabled = false
       this.placeholderTarget.hidden = true
       this.messageTarget.textContent = "計測中です。映像は端末内でのみ解析されます。"
@@ -183,6 +184,7 @@ export default class extends Controller {
     const score = calcScore(metrics)
     const state = classifyState(score, metrics.facePresent)
     this.samples.push({ score, state, metrics })
+    this.updateSessionAverage()
     this.pulsePoints.push(score)
     if (this.pulsePoints.length > PULSE_MAX_POINTS) this.pulsePoints.shift()
     this.scoreTarget.textContent = score
@@ -207,6 +209,19 @@ export default class extends Controller {
 
   updateBlinkCount() {
     if (this.hasBlinkCountTarget) this.blinkCountTarget.textContent = this.blinkCount
+  }
+
+  updateSessionAverage() {
+    if (!this.hasSessionAverageTarget) return
+
+    if (this.samples.length === 0) {
+      this.sessionAverageTarget.textContent = "--"
+      return
+    }
+
+    const total = this.samples.reduce((sum, sample) => sum + sample.score, 0)
+    const average = Math.round(total / this.samples.length)
+    this.sessionAverageTarget.textContent = average
   }
 
   async createSession() {
