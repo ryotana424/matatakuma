@@ -5,7 +5,9 @@
     %div
       %p.measure-kicker DAILY REPORT
       %h1.page-title= "#{@date.iso8601} のレポート"
-    = link_to "レポート一覧へ", reports_path, class: "btn btn--ghost"
+    %div
+      = link_to "施策一覧へ", interventions_path, class: "btn btn--ghost"
+      = link_to "レポート一覧へ", reports_path, class: "btn btn--ghost"
 
   .report-summary-grid
     .panel.report-stat
