@@ -1,6 +1,6 @@
 import { Controller } from "@hotwired/stimulus"
 import { LM, calcEAR, calcGazeOnScreen, calcHeadStable } from "focus/landmarks"
-import { computeMetrics, calcScore, classifyState } from "focus/score"
+import { computeMetrics, calcScore, classifyState, EAR_CLOSED_THRESH, isFaceTemporarilyAbsent } from "focus/score"
 import { aggregateSession } from "focus/aggregate"
 
 const WINDOW_MS = 30000
@@ -10,13 +10,15 @@ const CAMERA_DEVICE_COOKIE_MAX_AGE = 60 * 60 * 24 * 180
 
 // 映像解析はブラウザ内で完結し、終了時に集計値だけをPOSTする。
 export default class extends Controller {
-  static targets = ["video", "canvas", "score", "state", "stopBtn", "placeholder", "message", "cameraSelect", "pulseCanvas"]
+  static targets = ["video", "canvas", "score", "state", "stopBtn", "placeholder", "message", "cameraSelect", "pulseCanvas", "blinkCount"]
   static values = { taskId: Number, createUrl: String }
 
   connect() {
     this.frameBuffer = []
     this.samples = []
     this.pulsePoints = []
+    this.blinkCount = 0
+    this.eyeClosed = false
     this.running = false
     this.sessionId = null
     this.autosaveTick = null
@@ -56,6 +58,9 @@ export default class extends Controller {
       await this.createSession()
       this.frameBuffer = []
       this.samples = []
+      this.blinkCount = 0
+      this.eyeClosed = false
+      this.updateBlinkCount()
       this.stopBtnTarget.disabled = false
       this.placeholderTarget.hidden = true
       this.messageTarget.textContent = "計測中です。映像は端末内でのみ解析されます。"
@@ -154,6 +159,7 @@ export default class extends Controller {
         earLeft,
         earRight,
       }
+      this.detectBlink((earLeft + earRight) / 2)
       this.drawLandmarks(lms)
     }
 
@@ -164,6 +170,13 @@ export default class extends Controller {
   }
 
   sampleOnce() {
+    if (isFaceTemporarilyAbsent(this.frameBuffer)) {
+      this.scoreTarget.textContent = "--"
+      this.stateTarget.textContent = this.stateLabel("interrupted")
+      this.stateTarget.dataset.state = "interrupted"
+      return
+    }
+
     const metrics = computeMetrics(this.frameBuffer)
     if (!metrics) return
 
@@ -176,6 +189,24 @@ export default class extends Controller {
     this.stateTarget.textContent = this.stateLabel(state)
     this.stateTarget.dataset.state = state
     this.drawPulseGraph()
+  }
+
+  // EARの立ち下がり（開→閉）エッジで瞬きを1回カウントする。
+  // 閉/開の閾値に差（ヒステリシス）を持たせ、境界付近のチャタリングで多重カウントしないようにする。
+  detectBlink(ear) {
+    const EAR_OPEN_THRESH = EAR_CLOSED_THRESH + 0.04
+
+    if (!this.eyeClosed && ear < EAR_CLOSED_THRESH) {
+      this.eyeClosed = true
+      this.blinkCount += 1
+      this.updateBlinkCount()
+    } else if (this.eyeClosed && ear > EAR_OPEN_THRESH) {
+      this.eyeClosed = false
+    }
+  }
+
+  updateBlinkCount() {
+    if (this.hasBlinkCountTarget) this.blinkCountTarget.textContent = this.blinkCount
   }
 
   async createSession() {
@@ -345,6 +376,6 @@ export default class extends Controller {
   }
 
   stateLabel(state) {
-    return { high: "High", medium: "Medium", low: "Low", away: "Away" }[state] || "--"
+    return { high: "High", medium: "Medium", low: "Low", away: "Away", interrupted: "検出中断" }[state] || "--"
   }
 }
