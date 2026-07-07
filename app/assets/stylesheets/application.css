@@ -360,6 +360,66 @@ a { color: var(--accent); text-decoration: none; }
   color: var(--danger);
 }
 
+/* ===== 統合ページ：タスク一覧パネルとタスク追加モーダル ===== */
+.task-panel__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.task-panel__title {
+  font-size: 18px;
+  color: var(--text-strong);
+}
+
+.task-modal__dialog {
+  max-width: 520px;
+}
+
+.task-modal__title {
+  margin-bottom: 16px;
+  font-size: 18px;
+  color: var(--text-strong);
+}
+
+.measure-camera--idle .measure-canvas-wrap {
+  min-height: 240px;
+}
+
+.measure-link--current {
+  opacity: 0.7;
+  cursor: default;
+}
+
+/* ===== 日次ステータスバー ===== */
+.daily-status-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 32px;
+  margin: 16px 0;
+  padding: 14px 20px;
+}
+
+.daily-status-bar__item {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.daily-status-bar__label {
+  color: var(--text-muted);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+}
+
+.daily-status-bar__value {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 18px;
+  color: var(--text-strong);
+}
+
 /* ===== タスク追加フォーム ===== */
 .task-form {
   display: flex;

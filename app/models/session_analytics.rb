@@ -29,6 +29,13 @@ class SessionAnalytics
       }
     end
 
+    # 集中度総量（平均スコア×計測分数）の合計。空配列なら nil
+    def focus_volume(sessions)
+      return nil if sessions.empty?
+
+      sessions.sum { |session| session.avg_score * (session.duration_sec / 60.0) }.round
+    end
+
     # 低集中＋離席の平均比率（%）。空配列なら nil
     def low_away_ratio(sessions)
       return nil if sessions.empty?

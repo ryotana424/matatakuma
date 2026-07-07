@@ -8,7 +8,7 @@ const source = readFileSync(join(currentDir, "measure_controller.js"), "utf8")
 
 assert.equal(source.includes(".drawImage("), false, "カメラ映像をcanvasへ描画しない")
 assert.equal(source.includes("drawPrivacySurface"), true, "匿名化された表示面を描画する")
-assert.equal(source.includes("static targets = [\"video\", \"canvas\", \"score\", \"state\", \"stopBtn\", \"placeholder\", \"message\", \"cameraSelect\", \"pulseCanvas\", \"blinkCount\", \"sessionAverage\", \"interventionSelect\"]"), true, "カメラ選択・波形canvas・平均スコア・施策選択のtargetを持つ")
+assert.equal(source.includes("static targets = [\"video\", \"canvas\", \"score\", \"state\", \"stopBtn\", \"placeholder\", \"message\", \"cameraSelect\", \"pulseCanvas\", \"blinkCount\", \"sessionAverage\", \"interventionSelect\", \"dailyDuration\", \"dailyFocusVolume\", \"dailyAverage\"]"), true, "カメラ選択・波形canvas・平均スコア・施策選択・日次ステータスのtargetを持つ")
 assert.equal(source.includes("this.start()"), true, "画面表示時に自動で計測開始する")
 assert.equal(source.includes("enumerateDevices()"), true, "利用可能なカメラを列挙する")
 assert.equal(source.includes("deviceId: { exact: deviceId }"), true, "選択したカメラIDで起動する")
@@ -55,5 +55,12 @@ assert.equal(source.includes("await this.saveProgress({ completed: true })"), tr
 
 assert.equal(source.includes("payload.intervention_id = this.selectedInterventionId()"), true, "定期保存と終了保存で選択中の施策IDを送る")
 assert.equal(source.includes("return value === \"\" ? null : Number(value)"), true, "施策未選択はnullとして送り紐付けを外せる")
+
+assert.equal(source.includes("updateDailyStatus()"), true, "毎秒サンプリング時に日次ステータスバーを更新する")
+assert.equal(source.includes("dailyBaseDurationSecValue"), true, "保存済みの本日作業秒数をベース値として受け取る")
+assert.equal(source.includes("dailyBaseVolumeValue"), true, "保存済みの本日集中度総量をベース値として受け取る")
+assert.equal(source.includes("dailyBaseScoreSumValue"), true, "保存済みセッションのスコア合計をベース値として受け取る")
+assert.equal(source.includes("dailyBaseSessionCountValue"), true, "保存済みセッション数をベース値として受け取る")
+assert.equal(source.includes("if (!this.hasDailyDurationTarget"), true, "日次ステータスバーが無い画面では何もしない")
 
 console.log("measure controller privacy display OK")

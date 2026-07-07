@@ -140,4 +140,18 @@ class SessionAnalyticsTest < ActiveSupport::TestCase
   test "task_summariesは空配列で空配列を返す" do
     assert_equal [], SessionAnalytics.task_summaries([])
   end
+
+  test "focus_volumeは各セッションの平均スコア×計測分数の合計を返す" do
+    sessions = [
+      Session.new(avg_score: 80, duration_sec: 1800),
+      Session.new(avg_score: 60, duration_sec: 600)
+    ]
+
+    # 80 * 30分 + 60 * 10分 = 2400 + 600 = 3000
+    assert_equal 3000, SessionAnalytics.focus_volume(sessions)
+  end
+
+  test "focus_volumeはセッションが空ならnilを返す" do
+    assert_nil SessionAnalytics.focus_volume([])
+  end
 end

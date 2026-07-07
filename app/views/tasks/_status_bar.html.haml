@@ -1,0 +1,13 @@
+-# 本日1日の作業時間・集中度総量・平均スコアを表示するステータスバー
+- summary = SessionAnalytics.summary(daily_sessions)
+- volume = SessionAnalytics.focus_volume(daily_sessions)
+.panel.daily-status-bar{ "aria-label": "本日のサマリー" }
+  .daily-status-bar__item
+    %span.daily-status-bar__label 本日の作業時間
+    %strong.daily-status-bar__value{ data: { measure_target: "dailyDuration" } }= format_duration(summary[:total_duration_sec])
+  .daily-status-bar__item
+    %span.daily-status-bar__label 集中度総量
+    %strong.daily-status-bar__value{ data: { measure_target: "dailyFocusVolume" } }= volume ? format_focus_volume(volume) : "--"
+  .daily-status-bar__item
+    %span.daily-status-bar__label 平均スコア
+    %strong.daily-status-bar__value{ data: { measure_target: "dailyAverage" } }= summary[:avg_score] || "--"

@@ -147,4 +147,72 @@ class TasksControllerTest < ActionDispatch::IntegrationTest
     assert_select "select#measure-intervention-select option", text: "施策なし"
     assert_select "select#measure-intervention-select option", text: "ポモドーロ"
   end
+
+  test "一覧ページにタスク追加モーダルが閉じた状態で含まれる" do
+    get tasks_url
+    assert_response :success
+    assert_select ".task-panel[data-task-modal-open-value='false']"
+    assert_select ".task-modal form input[name='task[name]']"
+    assert_select "button", /タスク追加/
+  end
+
+  test "作成失敗時はモーダルが開いた状態で一覧を再表示する" do
+    post tasks_url, params: { task: { name: "" } }
+    assert_response :unprocessable_entity
+    assert_select ".task-panel[data-task-modal-open-value='true']"
+    assert_select ".field-error"
+  end
+
+  test "一覧ページにカメラプレースホルダーが表示される" do
+    get tasks_url
+    assert_select ".measure-camera__empty", /タスクを選んで計測開始/
+  end
+
+  test "一覧ページに本日のステータスバーが表示される" do
+    task = Task.create!(name: "コーディング")
+    task.sessions.create!(started_at: 2.hours.ago, ended_at: 1.hour.ago, duration_sec: 1800,
+                          avg_score: 80, status: :completed)
+    task.sessions.create!(started_at: 1.hour.ago, ended_at: 30.minutes.ago, duration_sec: 600,
+                          avg_score: 60, status: :completed)
+
+    get tasks_url
+
+    assert_select ".daily-status-bar" do
+      # 作業時間 1800+600 秒 = 0:40:00
+      assert_select "[data-measure-target='dailyDuration']", "0:40:00"
+      # 集中度総量 80*30 + 60*10 = 3000 → 3k
+      assert_select "[data-measure-target='dailyFocusVolume']", "3k"
+      # 平均 (80+60)/2 = 70
+      assert_select "[data-measure-target='dailyAverage']", "70"
+    end
+  end
+
+  test "本日のセッションがなければステータスバーはプレースホルダー表示" do
+    get tasks_url
+    assert_select ".daily-status-bar" do
+      assert_select "[data-measure-target='dailyDuration']", "0:00:00"
+      assert_select "[data-measure-target='dailyFocusVolume']", "--"
+      assert_select "[data-measure-target='dailyAverage']", "--"
+    end
+  end
+
+  test "計測ページに本日のステータスバーが表示される" do
+    task = Task.create!(name: "計測対象")
+    get measure_task_url(task)
+    assert_response :success
+    assert_select ".daily-status-bar"
+  end
+
+  test "計測ページにタスク一覧が表示され計測中タスクにはリンクが出ない" do
+    task = Task.create!(name: "計測対象")
+    Task.create!(name: "別タスク")
+
+    get measure_task_url(task)
+
+    assert_response :success
+    assert_select ".task-panel .task-table"
+    assert_select "body", /別タスク/
+    # 計測中の行は「計測中」ラベルになり計測開始リンクを出さない
+    assert_select ".measure-link--current", "計測中"
+  end
 end

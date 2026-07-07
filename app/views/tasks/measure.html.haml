@@ -1,6 +1,16 @@
 - content_for(:title) { "#{@task.name} | Focus Pulse" }
 
-.measure-page{ data: { controller: "measure", measure_task_id_value: @task.id, measure_create_url_value: task_sessions_path(@task) } }
+-# 日次ステータスバーのライブ更新用ベース値（保存済み完了セッションの集計）
+- daily_summary = SessionAnalytics.summary(@daily_sessions)
+- daily_volume = SessionAnalytics.focus_volume(@daily_sessions) || 0
+
+.measure-page{ data: { controller: "measure",
+                       measure_task_id_value: @task.id,
+                       measure_create_url_value: task_sessions_path(@task),
+                       measure_daily_base_duration_sec_value: daily_summary[:total_duration_sec],
+                       measure_daily_base_volume_value: daily_volume,
+                       measure_daily_base_score_sum_value: @daily_sessions.sum(&:avg_score),
+                       measure_daily_base_session_count_value: @daily_sessions.size } }
   .page-head.measure-head
     %div
       %p.measure-kicker MEASUREMENT
@@ -21,10 +31,7 @@
           %option カメラを確認中
       .measure-camera-control
         %label.measure-camera-control__label{ for: "measure-intervention-select" } 試す施策
-        %select#measure-intervention-select.input.measure-camera-control__select{ data: { measure_target: "interventionSelect" } }
-          %option{ value: "" } 施策なし
-          - @interventions.each do |intervention|
-            %option{ value: intervention.id }= intervention.name
+        = render "intervention_select", interventions: @interventions, selected_intervention_id: nil
       .measure-actions
         %button.btn.btn--finish{ type: "button", disabled: true, data: { action: "measure#stop", measure_target: "stopBtn" } }
           %span.btn--finish__icon{ "aria-hidden": true }
@@ -53,3 +60,7 @@
         .measure-breakdown__item
           %span 瞬き回数
           %strong{ data: { measure_target: "blinkCount" } } 0
+
+  = render "status_bar", daily_sessions: @daily_sessions
+
+  = render "task_list", tasks: @tasks, form_task: @new_task, current_task: @task
