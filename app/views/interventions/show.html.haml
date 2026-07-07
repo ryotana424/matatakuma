@@ -11,6 +11,20 @@
     %p.page-lead= @intervention.description
 
   %section.panel.report-section
+    %h2.report-section__title 施策を編集
+    = form_with model: @intervention, url: intervention_path(@intervention), method: :patch, class: "report-form" do |f|
+      .report-form__field
+        = f.label :name, "施策名"
+        = f.text_field :name, class: "input"
+        - if @intervention.errors[:name].present?
+          %span.field-error= "施策名#{@intervention.errors[:name].first}"
+      .report-form__field
+        = f.label :description, "説明"
+        = f.text_area :description, rows: 2, class: "input report-textarea"
+      = f.submit "更新", class: "btn btn--primary"
+    = button_to "削除", intervention_path(@intervention), method: :delete, class: "btn btn--ghost", form: { data: { turbo_confirm: "この施策を削除しますか？セッション記録は残ります。" } }
+
+  %section.panel.report-section
     %h2.report-section__title 効果比較（全期間）
     - if @applied_summary[:count].zero?
       %p.report-empty この施策を適用したセッションはまだありません。計測画面で施策を選択するか、日次レポートのセッション内訳から紐付けてください。

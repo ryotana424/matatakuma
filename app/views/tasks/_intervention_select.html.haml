@@ -1,0 +1,5 @@
+= turbo_frame_tag "measure-intervention-select-frame" do
+  %select#measure-intervention-select.input.measure-camera-control__select{ data: { measure_target: "interventionSelect" } }
+    %option{ value: "" } 施策なし
+    - interventions.each do |intervention|
+      %option{ value: intervention.id, selected: intervention.id == selected_intervention_id }= intervention.name

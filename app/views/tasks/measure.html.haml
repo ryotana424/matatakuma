@@ -31,10 +31,7 @@
           %option カメラを確認中
       .measure-camera-control
         %label.measure-camera-control__label{ for: "measure-intervention-select" } 試す施策
-        %select#measure-intervention-select.input.measure-camera-control__select{ data: { measure_target: "interventionSelect" } }
-          %option{ value: "" } 施策なし
-          - @interventions.each do |intervention|
-            %option{ value: intervention.id }= intervention.name
+        = render "intervention_select", interventions: @interventions, selected_intervention_id: nil
       .measure-actions
         %button.btn.btn--finish{ type: "button", disabled: true, data: { action: "measure#stop", measure_target: "stopBtn" } }
           %span.btn--finish__icon{ "aria-hidden": true }
