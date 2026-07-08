@@ -1,7 +1,7 @@
 -# タスク一覧＋タスク追加モーダル。index と measure の両画面から共通利用する
 -# ステータスenum値（todo/doing/done/archived/interrupted）→ 日本語ラベルへの対応表
 - status_labels = { "todo" => "未着手", "doing" => "着手中", "done" => "完了", "archived" => "アーカイブ", "interrupted" => "中断" }
-- status_action_options = [["着手中", "doing"], ["完了", "done"], ["アーカイブ", "archived"], ["中断", "interrupted"]]
+- status_action_options = [["未着手", "todo"], ["着手中", "doing"], ["完了", "done"], ["アーカイブ", "archived"], ["中断", "interrupted"]]
 
 -# open value は .to_s で文字列化する（Hamlは属性値がfalseだと属性自体を省略するため）
 .task-panel{ data: { controller: "task-modal", task_modal_open_value: form_task.errors.any?.to_s } }

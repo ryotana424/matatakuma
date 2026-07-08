@@ -611,6 +611,10 @@ a { color: var(--accent); text-decoration: none; }
   background-color: var(--accent-soft);
 }
 
+.task-status-select.status-pill--todo {
+  background-color: var(--surface-overlay);
+}
+
 .measure-link {
   display: inline-flex;
   align-items: center;

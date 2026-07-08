@@ -94,6 +94,7 @@ class TasksControllerTest < ActionDispatch::IntegrationTest
     get tasks_url
 
     assert_select "td[data-label='状態'] form[action='#{task_path(task)}'] select[name='task[status]'][onchange='this.form.requestSubmit()']"
+    assert_select "option[value=todo]", "未着手"
     assert_select "option[value=doing][selected=selected]", "着手中"
     assert_select "option[value=done]", "完了"
     assert_select "option[value=archived]", "アーカイブ"
