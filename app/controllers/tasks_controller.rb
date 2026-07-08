@@ -24,6 +24,7 @@ class TasksController < ApplicationController
 
   def measure
     @task = Task.find(params[:id])
+    @task.doing! if @task.todo?
     @interventions = Intervention.order(created_at: :desc)
     @previous_session = @task.sessions.completed.order(started_at: :desc).first
     @tasks = Task.order(created_at: :desc)

@@ -120,6 +120,15 @@ class TasksControllerTest < ActionDispatch::IntegrationTest
     assert_select "button", /計測終了して保存/
   end
 
+  test "未着手タスクの計測画面を開くと着手中にする" do
+    task = Task.create!(name: "計測タスク")
+
+    get measure_task_url(task)
+
+    assert_response :success
+    assert task.reload.doing?
+  end
+
   test "計測画面にこのセッション平均と前回セッション平均が表示される" do
     task = Task.create!(name: "計測タスク")
     older = task.sessions.create!(started_at: 2.hours.ago, ended_at: 1.hour.ago,
