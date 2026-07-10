@@ -52,6 +52,10 @@ assert.equal(source.includes("this.sessionId = null"), true, "開始時に作成
 assert.equal(source.includes("this.autosaveTick = setInterval(() => this.saveProgress(), 15000)"), true, "計測中に定期保存する")
 assert.equal(source.includes("await this.createSession()"), true, "計測開始時にrunningセッションを作成する")
 assert.equal(source.includes("await this.saveProgress({ completed: true })"), true, "停止時にcompletedとして最終保存する")
+assert.equal(source.includes("faceAbsenceDeadlineMs"), true, "顔の連続未検出から自動終了期限を判定する")
+assert.equal(source.includes("void this.stopForAbsence(new Date(deadlineMs))"), true, "離席が30分続いた時点で自動終了する")
+assert.equal(source.includes("this.faceAbsentSinceMs = null"), true, "顔を再検出したら連続離席時間をリセットする")
+assert.equal(source.includes("payload.status = \"interrupted\""), true, "離席による自動終了を中断セッションとして保存する")
 
 assert.equal(source.includes("payload.intervention_id = this.selectedInterventionId()"), true, "定期保存と終了保存で選択中の施策IDを送る")
 assert.equal(source.includes("return value === \"\" ? null : Number(value)"), true, "施策未選択はnullとして送り紐付けを外せる")

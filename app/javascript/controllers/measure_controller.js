@@ -2,6 +2,7 @@ import { Controller } from "@hotwired/stimulus"
 import { LM, calcEAR, calcGazeOnScreen, calcHeadStable } from "focus/landmarks"
 import { computeMetrics, calcScore, classifyState, EAR_CLOSED_THRESH, isFaceTemporarilyAbsent } from "focus/score"
 import { aggregateSession, averageFocusableScore } from "focus/aggregate"
+import { faceAbsenceDeadlineMs } from "focus/absence_timeout"
 
 const WINDOW_MS = 30000
 const SCORE_HISTORY_MAX_POINTS = 30 * 60
@@ -27,7 +28,9 @@ export default class extends Controller {
     this.blinkCount = 0
     this.eyeClosed = false
     this.running = false
+    this.stopping = false
     this.sessionId = null
+    this.faceAbsentSinceMs = null
     this.autosaveTick = null
     this.debugMode = this.isDebugModeEnabled()
     this.debugRows = {}
@@ -65,6 +68,7 @@ export default class extends Controller {
 
       this.running = true
       this.startedAt = new Date()
+      this.faceAbsentSinceMs = null
       await this.createSession()
       this.frameBuffer = []
       this.samples = []
@@ -177,12 +181,19 @@ export default class extends Controller {
     }
 
     const now = Date.now()
+    if (faceDetected) {
+      this.faceAbsentSinceMs = null
+    } else if (!Number.isFinite(this.faceAbsentSinceMs)) {
+      this.faceAbsentSinceMs = now
+    }
     this.frameBuffer.push({ ts: now, ...frame })
     const cutoff = now - WINDOW_MS
     this.frameBuffer = this.frameBuffer.filter((f) => f.ts >= cutoff)
   }
 
   sampleOnce() {
+    if (this.endIfFaceAbsentTooLong()) return
+
     this.updateDailyStatus()
 
     if (isFaceTemporarilyAbsent(this.frameBuffer)) {
@@ -210,6 +221,22 @@ export default class extends Controller {
     this.stateTarget.dataset.state = state
     this.drawScoreTrend()
     this.updateDebugPanel({ score, state, metrics })
+  }
+
+  endIfFaceAbsentTooLong(nowMs = Date.now()) {
+    if (!this.startedAt || this.stopping) return false
+
+    const latestFrame = this.frameBuffer[this.frameBuffer.length - 1]
+    const deadlineMs = faceAbsenceDeadlineMs({
+      sessionStartedAtMs: this.startedAt.getTime(),
+      latestFrame,
+      faceAbsentSinceMs: this.faceAbsentSinceMs,
+      nowMs,
+    })
+    if (deadlineMs === null || nowMs < deadlineMs) return false
+
+    void this.stopForAbsence(new Date(deadlineMs))
+    return true
   }
 
   // EARの立ち下がり（開→閉）エッジで瞬きを1回カウントする。
@@ -386,15 +413,19 @@ export default class extends Controller {
     return value === "" ? null : Number(value)
   }
 
-  async saveProgress({ completed = false } = {}) {
+  async saveProgress({ completed = false, interrupted = false, endedAt = null } = {}) {
     if (!this.sessionId || !this.startedAt) return true
 
-    const now = new Date()
+    const now = endedAt || new Date()
     const payload = aggregateSession(this.samples, this.startedAt, now)
     payload.intervention_id = this.selectedInterventionId()
     if (completed) {
       payload.status = "completed"
       payload.ended_reason = "stopped"
+      payload.ended_at = now.toISOString()
+    } else if (interrupted) {
+      payload.status = "interrupted"
+      payload.ended_reason = "timeout"
       payload.ended_at = now.toISOString()
     }
 
@@ -408,8 +439,9 @@ export default class extends Controller {
   }
 
   async stop() {
-    if (!this.startedAt) return
+    if (!this.startedAt || this.stopping) return
 
+    this.stopping = true
     this.shutdown()
     this.stopBtnTarget.disabled = true
     this.messageTarget.textContent = "保存中です..."
@@ -420,6 +452,22 @@ export default class extends Controller {
       window.location.href = "/tasks"
     } else {
       this.messageTarget.textContent = "保存に失敗しました。ページを再読み込みしてもう一度試してください。"
+    }
+  }
+
+  async stopForAbsence(endedAt) {
+    if (!this.startedAt || this.stopping) return
+
+    this.stopping = true
+    this.shutdown()
+    this.messageTarget.textContent = "離席が30分続いたため、セッションを終了しています..."
+
+    const saved = await this.saveProgress({ interrupted: true, endedAt })
+    if (saved) {
+      window.location.href = "/tasks"
+    } else {
+      this.stopping = false
+      this.messageTarget.textContent = "セッションの自動終了に失敗しました。ページを再読み込みしてください。"
     }
   }
 
