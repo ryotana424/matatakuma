@@ -50,6 +50,7 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
       session: {
         duration_sec: 60,
         avg_score: 78,
+        focus_volume: 72.5,
         high_ratio: 0.5, medium_ratio: 0.3, low_ratio: 0.15, away_ratio: 0.05,
         interrupt_count: 4,
         gaze_on_screen_ratio: 0.82,
@@ -69,6 +70,7 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     session.reload
     assert session.running?
     assert_equal 78, session.avg_score
+    assert_equal 72.5, session.focus_volume
     assert_equal 0.82, session.gaze_on_screen_ratio
     assert_equal 1, session.save_count
     assert_not_nil session.last_seen_at

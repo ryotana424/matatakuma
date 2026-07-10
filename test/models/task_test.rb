@@ -50,7 +50,7 @@ class TaskTest < ActiveSupport::TestCase
     assert_nil task.average_score
   end
 
-  test "集中度総量は完了済みセッションの平均集中スコアと計測分数から算出できる" do
+  test "集中度総量は完了済みセッションの離席時間を除いて算出できる" do
     task = Task.create!(name: "総量集計")
     task.sessions.create!(started_at: 2.hours.ago, ended_at: 1.hour.ago, duration_sec: 1200, avg_score: 70,
                           high_ratio: 0.5, medium_ratio: 0.3, low_ratio: 0.1, away_ratio: 0.1, interrupt_count: 2,
@@ -60,7 +60,7 @@ class TaskTest < ActiveSupport::TestCase
                           status: :completed)
     task.sessions.create!(started_at: Time.current, duration_sec: 300, avg_score: 10, status: :running)
 
-    assert_equal 2400, task.focus_volume
+    assert_equal 2070, task.focus_volume
   end
 
   test "完了済みセッションが無いタスクの集中度総量はnil" do

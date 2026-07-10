@@ -19,6 +19,7 @@ export function aggregateSession(samples, startedAt, endedAt) {
     ended_at: endedAt.toISOString(),
     duration_sec: Math.round((endedAt - startedAt) / 1000),
     avg_score: avg,
+    focus_volume: roundRatio(focusVolume(samples)),
     high_ratio: count("high") / n,
     medium_ratio: count("medium") / n,
     low_ratio: count("low") / n,
@@ -43,6 +44,13 @@ export function averageFocusableScore(samples) {
 
   const scoreTotal = focusableSamples.reduce((sum, sample) => sum + sample.score, 0)
   return Math.round(scoreTotal / focusableSamples.length)
+}
+
+// 1秒ごとの在席サンプルだけをスコア×分へ換算する。離席・未検出時間は加算しない。
+export function focusVolume(samples) {
+  return samples
+    .filter((sample) => sample.state !== "away")
+    .reduce((sum, sample) => sum + sample.score, 0) / 60
 }
 
 function avgMetric(samples, key) {

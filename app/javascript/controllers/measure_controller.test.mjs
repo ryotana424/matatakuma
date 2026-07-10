@@ -65,6 +65,7 @@ assert.equal(source.includes("dailyBaseDurationSecValue"), true, "保存済み�
 assert.equal(source.includes("dailyBaseVolumeValue"), true, "保存済みの本日集中度総量をベース値として受け取る")
 assert.equal(source.includes("dailyBaseScoreSumValue"), true, "保存済みセッションのスコア合計をベース値として受け取る")
 assert.equal(source.includes("dailyBaseSessionCountValue"), true, "保存済みセッション数をベース値として受け取る")
+assert.equal(source.includes("focusVolume(this.samples)"), true, "離席を除いた集中度総量を共通関数で算出する")
 assert.equal(source.includes("if (!this.hasDailyDurationTarget"), true, "日次ステータスバーが無い画面では何もしない")
 
 console.log("measure controller privacy display OK")

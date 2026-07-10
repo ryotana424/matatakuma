@@ -84,7 +84,7 @@ class TasksControllerTest < ActionDispatch::IntegrationTest
 
     assert_select "thead th:nth-child(4)", "集中度総量"
     assert_select "thead th:nth-child(5)", "平均集中スコア"
-    assert_select "td[data-label='集中度総量']", "2.4k"
+    assert_select "td[data-label='集中度総量']", "2.1k"
   end
 
   test "計測済みタスクは状態欄のプルダウンで変更できる" do

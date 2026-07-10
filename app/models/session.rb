@@ -14,6 +14,7 @@ class Session < ApplicationRecord
   validates :score_min, :score_max,
             numericality: { greater_than_or_equal_to: 0, less_than_or_equal_to: 100 }
   validates :score_stddev, numericality: { greater_than_or_equal_to: 0 }
+  validates :focus_volume, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
   validates :interrupt_count, :save_count, :longest_low_streak_sec, :longest_away_streak_sec,
             numericality: { greater_than_or_equal_to: 0 }
   validates :ended_reason, inclusion: { in: %w[stopped timeout error], message: "は一覧にありません" }, allow_nil: true
@@ -22,4 +23,12 @@ class Session < ApplicationRecord
   scope :on_date, ->(date) {
     where(started_at: date.all_day)
   }
+
+  # 新しいセッションはクライアントが在席サンプルから算出した正確な値を持つ。
+  # 移行前データや手入力レコードは、離席率を除いた時間から近似する。
+  def effective_focus_volume
+    return focus_volume unless focus_volume.nil?
+
+    avg_score * (duration_sec / 60.0) * (1 - away_ratio)
+  end
 end

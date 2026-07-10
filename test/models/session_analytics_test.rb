@@ -141,14 +141,20 @@ class SessionAnalyticsTest < ActiveSupport::TestCase
     assert_equal [], SessionAnalytics.task_summaries([])
   end
 
-  test "focus_volumeは各セッションの平均スコア×計測分数の合計を返す" do
+  test "focus_volumeは離席時間を除いた各セッションの集中度総量を返す" do
     sessions = [
-      Session.new(avg_score: 80, duration_sec: 1800),
-      Session.new(avg_score: 60, duration_sec: 600)
+      Session.new(avg_score: 80, duration_sec: 1800, away_ratio: 0.1),
+      Session.new(avg_score: 60, duration_sec: 600, away_ratio: 0.2)
     ]
 
-    # 80 * 30分 + 60 * 10分 = 2400 + 600 = 3000
-    assert_equal 3000, SessionAnalytics.focus_volume(sessions)
+    # 80 * 30分 * 90% + 60 * 10分 * 80% = 2160 + 480 = 2640
+    assert_equal 2640, SessionAnalytics.focus_volume(sessions)
+  end
+
+  test "focus_volumeは保存済みの在席サンプル累計を優先する" do
+    session = Session.new(avg_score: 80, duration_sec: 1800, away_ratio: 0.1, focus_volume: 1234.5)
+
+    assert_equal 1235, SessionAnalytics.focus_volume([session])
   end
 
   test "focus_volumeはセッションが空ならnilを返す" do

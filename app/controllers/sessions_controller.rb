@@ -45,7 +45,7 @@ class SessionsController < ApplicationController
   # 受け取るのは集計済み数値のみ。映像・座標・画像は一切受け取らない
   def session_params
     params.require(:session).permit(
-      :started_at, :ended_at, :duration_sec, :avg_score,
+      :started_at, :ended_at, :duration_sec, :avg_score, :focus_volume,
       :high_ratio, :medium_ratio, :low_ratio, :away_ratio, :interrupt_count,
       :gaze_on_screen_ratio, :head_stable_ratio, :blink_normal_ratio,
       :session_continuity_ratio, :face_present_ratio,

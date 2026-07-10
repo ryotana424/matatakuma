@@ -1,5 +1,5 @@
 import assert from "node:assert"
-import { aggregateSession, averageFocusableScore } from "./aggregate.js"
+import { aggregateSession, averageFocusableScore, focusVolume } from "./aggregate.js"
 
 const samples = [
   {
@@ -33,6 +33,7 @@ const end = new Date("2026-06-26T10:00:05Z")
 const r = aggregateSession(samples, start, end)
 
 assert.equal(r.avg_score, 78)
+assert.equal(r.focus_volume, 5.17)
 assert.equal(r.high_ratio, 0.6)
 assert.equal(r.medium_ratio, 0)
 assert.equal(r.low_ratio, 0.2)
@@ -52,5 +53,6 @@ assert.equal(r.longest_away_streak_sec, 1)
 
 assert.equal(averageFocusableScore(samples), 78)
 assert.equal(averageFocusableScore([{ score: 0, state: "away", metrics: { facePresent: 0 } }]), 0)
+assert.equal(focusVolume([{ score: 60, state: "medium" }, { score: 100, state: "away" }]), 1)
 
 console.log("aggregate OK")

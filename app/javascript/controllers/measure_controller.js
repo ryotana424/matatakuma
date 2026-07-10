@@ -1,7 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 import { LM, calcEAR, calcGazeOnScreen, calcHeadStable } from "focus/landmarks"
 import { computeMetrics, calcScore, classifyState, EAR_CLOSED_THRESH, isFaceTemporarilyAbsent } from "focus/score"
-import { aggregateSession, averageFocusableScore } from "focus/aggregate"
+import { aggregateSession, averageFocusableScore, focusVolume } from "focus/aggregate"
 import { faceAbsenceDeadlineMs } from "focus/absence_timeout"
 
 const WINDOW_MS = 30000
@@ -270,7 +270,7 @@ export default class extends Controller {
   }
 
   // 本日ステータスバーを「保存済みセッションの集計＋計測中セッションの見込み値」で更新する。
-  // 計測中セッションは経過秒数と離席を除いた現在平均から算出する
+  // 計測中セッションは、離席を除いた1秒ごとのスコア累計から算出する
   updateDailyStatus() {
     if (!this.hasDailyDurationTarget || !this.startedAt) return
 
@@ -286,7 +286,8 @@ export default class extends Controller {
       return
     }
 
-    const currentVolume = currentAvg === null ? 0 : (currentAvg * elapsedSec) / 60
+    // 離席サンプルは総量へ加算しない。未検出でサンプル自体がない時間も増えない。
+    const currentVolume = focusVolume(this.samples)
     this.dailyFocusVolumeTarget.textContent = this.formatFocusVolume(this.dailyBaseVolumeValue + currentVolume)
 
     const scoreSum = this.dailyBaseScoreSumValue + (currentAvg ?? 0)

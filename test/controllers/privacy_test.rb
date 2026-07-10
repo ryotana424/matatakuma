@@ -12,7 +12,7 @@ class PrivacyTest < ActiveSupport::TestCase
 
   test "Sessionの保存カラムは集計値のみ" do
     expected = %w[
-      started_at ended_at duration_sec avg_score
+      started_at ended_at duration_sec avg_score focus_volume
       high_ratio medium_ratio low_ratio away_ratio interrupt_count
       status last_seen_at save_count ended_reason
       gaze_on_screen_ratio head_stable_ratio blink_normal_ratio

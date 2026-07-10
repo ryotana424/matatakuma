@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_06_000100) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_10_000100) do
   create_table "daily_reports", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.text "measure_note"
@@ -37,6 +37,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_06_000100) do
     t.datetime "ended_at"
     t.string "ended_reason"
     t.float "face_present_ratio", default: 0.0, null: false
+    t.float "focus_volume"
     t.float "gaze_on_screen_ratio", default: 0.0, null: false
     t.float "head_stable_ratio", default: 0.0, null: false
     t.float "high_ratio", default: 0.0, null: false

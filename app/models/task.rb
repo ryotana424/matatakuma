@@ -15,12 +15,11 @@ class Task < ApplicationRecord
     sessions.completed.average(:avg_score)&.round
   end
 
-  # 完了済みセッションの平均集中スコア * 計測分数。未計測なら nil
+  # 完了済みセッションの在席中の集中度総量。離席中は加算しない。
   def focus_volume
-    average = average_score
-    return nil unless average
+    completed_sessions = sessions.completed.to_a
+    return nil if completed_sessions.empty?
 
-    completed_duration_min = sessions.completed.sum(:duration_sec) / 60.0
-    (average * completed_duration_min).round
+    completed_sessions.sum(&:effective_focus_volume).round
   end
 end
