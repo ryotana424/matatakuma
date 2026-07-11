@@ -11,10 +11,19 @@
 
     = yield :head
 
-    -# Google Fonts（共通デザインシステムのフォント: Outfit + JetBrains Mono）
+    -# Google Fonts（デザインシステムのフォント: IBM Plex Sans JP + IBM Plex Mono）
     %link{ rel: "preconnect", href: "https://fonts.googleapis.com" }
     %link{ rel: "preconnect", href: "https://fonts.gstatic.com", crossorigin: true }
-    %link{ rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Outfit:wght@400;500;600;700&display=swap" }
+    %link{ rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+JP:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" }
+
+    -# テーマ（自動/ライト/ダーク）。FOUC回避のため描画前に data-theme を復元する
+    :javascript
+      (function () {
+        try {
+          var t = localStorage.getItem("fp-theme");
+          if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t);
+        } catch (e) {}
+      })();
 
     %link{ rel: "icon", href: "/icon.png", type: "image/png" }
     %link{ rel: "icon", href: "/icon.svg", type: "image/svg+xml" }
@@ -40,6 +49,10 @@
           = link_to "説明", about_path, class: "app-nav-link", data: { turbo_frame: "modal" }
           = link_to "日次レポート", reports_path, class: "app-nav-link", data: { turbo_frame: "modal" }
           = link_to "施策", interventions_path, class: "app-nav-link", data: { turbo_frame: "modal" }
+          %div.segmented{ role: "group", "aria-label": "テーマ切替", data: { controller: "theme" } }
+            %button.segmented__btn{ type: "button", data: { theme_target: "btn", theme_theme_param: "auto", action: "theme#select" } } 自動
+            %button.segmented__btn{ type: "button", data: { theme_target: "btn", theme_theme_param: "light", action: "theme#select" } } ライト
+            %button.segmented__btn{ type: "button", data: { theme_target: "btn", theme_theme_param: "dark", action: "theme#select" } } ダーク
 
       - if notice.present?
         .flash= notice

@@ -1,102 +1,168 @@
 - content_for(:title) { "#{@date.iso8601} のレポート | Focus Pulse" }
 
 = turbo_frame_tag "modal" do
-  .page-head.report-head
-    %div
-      %p.measure-kicker DAILY REPORT
-      %h1.page-title= "#{@date.iso8601} のレポート"
-    %div
-      = link_to "施策一覧へ", interventions_path, class: "btn btn--ghost"
-      = link_to "レポート一覧へ", reports_path, class: "btn btn--ghost"
+  .report-detail{ style: "display:flex;flex-direction:column;gap:var(--space-5)" }
+    -# 日付ナビ + 画面内アクション
+    .report-detail__head{ style: "display:flex;align-items:center;gap:14px;flex-wrap:wrap" }
+      = link_to "←", report_path(date: (@date - 1).iso8601), class: "ds-btn ds-btn--icon", "aria-label": "前日", data: { turbo_frame: "modal" }
+      %h1.ds-page-title
+        = "#{@date.year}年#{@date.month}月#{@date.day}日"
+        %span.ds-page-title__sub= %w[日 月 火 水 木 金 土][@date.wday] + "曜日"
+      = link_to "→", report_path(date: (@date + 1).iso8601), class: "ds-btn ds-btn--icon", "aria-label": "翌日", data: { turbo_frame: "modal" }
+      %div{ style: "margin-left:auto;display:flex;gap:8px" }
+        = link_to "施策一覧へ", interventions_path, class: "ds-btn ds-btn--sm", data: { turbo_frame: "modal" }
+        = link_to "レポート一覧へ", reports_path, class: "ds-btn ds-btn--sm", data: { turbo_frame: "modal" }
 
-  .report-summary-grid
-    .panel.report-stat
-      %span.report-stat__label 平均スコア
-      %strong.report-stat__value= @avg_score || "--"
-    .panel.report-stat
-      %span.report-stat__label 計測時間合計
-      %strong.report-stat__value= format_duration(@total_duration)
-    .panel.report-stat
-      %span.report-stat__label セッション数
-      %strong.report-stat__value= @sessions.size
-    .panel.report-stat
-      %span.report-stat__label 低集中・離席比率
-      %strong.report-stat__value= @low_away_ratio ? "#{@low_away_ratio}%" : "--"
-    .panel.report-stat
-      %span.report-stat__label 改善候補
-      %strong.report-stat__value= @weakest_metric ? "#{@weakest_metric[:label]} #{@weakest_metric[:value]}%" : "--"
+    -# KPI
+    %section.kpi-grid{ "aria-label": "KPI" }
+      .kpi-card
+        %span.kpi-card__label 平均スコア
+        %span.kpi-card__value
+          = @avg_score || "--"
+          %span.kpi-card__unit / 100
+        - if @avg_score
+          .kpi-card__meter
+            %span{ style: "width:#{@avg_score}%" }
+      .kpi-card
+        %span.kpi-card__label 計測時間合計
+        %span.kpi-card__value= format_duration(@total_duration)
+      .kpi-card
+        %span.kpi-card__label セッション数
+        %span.kpi-card__value= @sessions.size
+      .kpi-card
+        %span.kpi-card__label 低集中・離席比率
+        %span.kpi-card__value
+          = @low_away_ratio || "--"
+          - if @low_away_ratio
+            %span.kpi-card__unit %
+        - if @low_away_ratio
+          .kpi-card__meter.kpi-card__meter--warn
+            %span{ style: "width:#{@low_away_ratio}%" }
+      .kpi-card
+        %span.kpi-card__label 改善候補
+        - if @weakest_metric
+          %span.kpi-card__value.kpi-card__value--compound
+            = @weakest_metric[:label]
+            %span.kpi-card__num= "#{@weakest_metric[:value]}%"
+          %span.kpi-card__foot 5指標中で最も低い項目
+        - else
+          %span.kpi-card__value --
 
-  %section.panel.report-section
-    %h2.report-section__title 時間帯別の集中
-    - if @sessions.any?
-      -# セッション平均スコアを在席時間で按分した近似値（時間帯内の変動は保存していない）
-      .report-chart
-        %canvas{ data: { controller: "report-chart",
-                         report_chart_labels_value: (0..23).map { |hour| "#{hour}時" }.to_json,
-                         report_chart_datasets_value: [{ label: "平均スコア", data: @hourly_focus.map { |bucket| bucket[:avg_score] }, backgroundColor: "#2dd4a7" }].to_json,
-                         report_chart_suggested_max_value: 100 } }
-      %p.report-empty ※ セッションの平均スコアを在席時間で按分した近似値です。
-    - else
-      %p.report-empty この日のセッションはありません。
+    -# 時間帯別の集中
+    %section.ds-panel
+      .ds-panel__head
+        %h2.ds-panel__title 時間帯別の集中
+        %span.ds-panel__hint 0–23時 / 平均スコア
+      - if @sessions.any?
+        .hchart
+          .hchart__legend
+            %span
+              %i.is-high
+              スコア50以上
+            %span
+              %i.is-low
+              50未満
+          .hchart__body
+            .hchart__yaxis
+              %span 100
+              %span 50
+              %span 0
+            .hchart__plot
+              .hchart__grid
+                %i
+                %i
+                %i
+              .hchart__bars
+                - @hourly_focus.each do |bucket|
+                  - score = bucket[:avg_score]
+                  - if score
+                    .hchart__bar{ title: "#{bucket[:hour]}時 スコア #{score}" }
+                      %span{ class: (score < 50 ? "is-low" : nil), style: "height:#{score}%" }
+                  - else
+                    .hchart__bar.hchart__bar--empty{ title: "#{bucket[:hour]}時 データなし" }
+                      %span
+          .hchart__xaxis-row
+            %div
+            .hchart__xaxis
+              - (0..23).each do |h|
+                %span= (h % 3 == 0 || h == 23) ? h : ""
+      - else
+        %p.report-empty{ style: "margin:0;color:var(--color-ink-3)" } この日のセッションはありません。
 
-  %section.panel.report-section
-    %h2.report-section__title タスク別サマリー
-    - if @task_summaries.any?
-      %table.task-table.report-session-table
-        %thead
-          %tr
-            %th タスク
-            %th セッション数
-            %th 平均スコア
-            %th 計測時間
-            %th 中断合計
-        %tbody
+    -# タスク別サマリー
+    %section.ds-panel
+      .ds-panel__head
+        %h2.ds-panel__title タスク別サマリー
+      - if @task_summaries.any?
+        .ds-table
+          .ds-table__head{ style: "grid-template-columns:1.8fr .7fr 1fr .9fr .8fr" }
+            %span タスク
+            %span.ds-table__cell--right セッション
+            %span.ds-table__cell--right 平均スコア
+            %span.ds-table__cell--right 計測時間
+            %span.ds-table__cell--right 中断合計
           - @task_summaries.each do |summary|
-            %tr
-              %td.task-name{ "data-label": "タスク" }= summary[:task_name]
-              %td.task-duration{ "data-label": "セッション数" }= summary[:count]
-              %td.task-duration{ "data-label": "平均スコア" }= summary[:avg_score]
-              %td.task-duration{ "data-label": "計測時間" }= format_duration(summary[:total_duration_sec])
-              %td.task-duration{ "data-label": "中断合計" }= summary[:interrupt_count]
-    - else
-      %p.report-empty この日のセッションはありません。
+            .ds-table__row{ style: "grid-template-columns:1.8fr .7fr 1fr .9fr .8fr" }
+              %span.ds-table__task-name= summary[:task_name]
+              %span.ds-table__cell--right.ds-table__cell--mono= summary[:count]
+              %span.ds-table__cell--right
+                - if summary[:avg_score]
+                  %span.score-meter
+                    %span.score-meter__track
+                      %span.score-meter__fill{ class: (summary[:avg_score] < 50 ? "score-meter__fill--low" : nil), style: "width:#{summary[:avg_score]}%" }
+                    %span.score-meter__value= summary[:avg_score]
+                - else
+                  %span.ds-table__cell--mono --
+              %span.ds-table__cell--right.ds-table__cell--mono= format_duration(summary[:total_duration_sec])
+              %span.ds-table__cell--right.ds-table__cell--mono= "#{summary[:interrupt_count]}回"
+      - else
+        %p.report-empty{ style: "margin:0;color:var(--color-ink-3)" } この日のセッションはありません。
 
-  %section.panel.report-section
-    %h2.report-section__title セッション内訳
-    - if @sessions.any?
-      %table.task-table.report-session-table
-        %thead
-          %tr
-            %th タスク
-            %th 平均スコア
-            %th 時間
-            %th 中断
-            %th 内訳
-            %th 最長低下
-            %th 施策
-        %tbody
+    -# セッション内訳
+    %section.ds-panel
+      .ds-panel__head
+        %h2.ds-panel__title セッション内訳
+        %span.ds-panel__hint 各セッションに施策を割り当てられます
+      - if @sessions.any?
+        .ds-table
+          .ds-table__head{ style: "grid-template-columns:1.5fr .9fr .8fr .6fr .7fr .9fr 1.6fr" }
+            %span タスク
+            %span.ds-table__cell--right 平均スコア
+            %span.ds-table__cell--right 時間
+            %span.ds-table__cell--right 中断
+            %span.ds-table__cell--right 視線%
+            %span.ds-table__cell--right 最長低下
+            %span 施策
           - @sessions.each do |session|
-            %tr
-              %td.task-name{ "data-label": "タスク" }= session.task.name
-              %td.task-duration{ "data-label": "平均スコア" }= session.avg_score
-              %td.task-duration{ "data-label": "時間" }= format_duration(session.duration_sec)
-              %td.task-duration{ "data-label": "中断" }= session.interrupt_count
-              %td.task-duration{ "data-label": "内訳" }= "視線 #{(session.gaze_on_screen_ratio * 100).round}%"
-              %td.task-duration{ "data-label": "最長低下" }= "低集中 #{session.longest_low_streak_sec}秒"
-              %td.task-duration{ "data-label": "施策" }
+            .ds-table__row{ style: "grid-template-columns:1.5fr .9fr .8fr .6fr .7fr .9fr 1.6fr" }
+              %span.ds-table__task-name= session.task.name
+              %span.ds-table__cell--right
+                %span.score-meter
+                  %span.score-meter__track
+                    %span.score-meter__fill{ class: (session.avg_score < 50 ? "score-meter__fill--low" : nil), style: "width:#{session.avg_score}%" }
+                  %span.score-meter__value= session.avg_score
+              %span.ds-table__cell--right.ds-table__cell--mono= format_duration(session.duration_sec)
+              %span.ds-table__cell--right.ds-table__cell--mono= "#{session.interrupt_count}回"
+              %span.ds-table__cell--right.ds-table__cell--mono= "#{(session.gaze_on_screen_ratio * 100).round}%"
+              %span.ds-table__cell--right.ds-table__cell--mono= "#{session.longest_low_streak_sec}秒"
+              %span
                 = form_with url: session_intervention_path(session), method: :patch, class: "report-intervention-form" do
-                  = select_tag "session[intervention_id]", options_from_collection_for_select(@interventions, :id, :name, session.intervention_id), include_blank: "なし", class: "input report-intervention-form__select"
-                  = submit_tag "更新", class: "btn btn--ghost", name: nil
-    - else
-      %p.report-empty この日のセッションはありません。
+                  = select_tag "session[intervention_id]", options_from_collection_for_select(@interventions, :id, :name, session.intervention_id), include_blank: "— 施策なし —", class: "ds-select", style: "flex:1"
+                  = submit_tag "更新", class: "ds-btn ds-btn--sm", name: nil
+      - else
+        %p.report-empty{ style: "margin:0;color:var(--color-ink-3)" } この日のセッションはありません。
 
-  %section.panel.report-section
-    %h2.report-section__title 施策メモ・振り返り
-    = form_with model: @report, url: report_path(date: @date.iso8601), method: :patch, class: "report-form" do |f|
-      .report-form__field
-        = f.label :measure_note, "試した施策（PDCA）"
-        = f.text_area :measure_note, rows: 4, class: "input report-textarea"
-      .report-form__field
-        = f.label :reflection, "振り返り"
-        = f.text_area :reflection, rows: 4, class: "input report-textarea"
-      = f.submit "保存", class: "btn btn--primary"
+    -# 施策メモ・振り返り
+    %section.ds-panel
+      .ds-panel__head
+        %h2.ds-panel__title 施策メモ・振り返り
+      = form_with model: @report, url: report_path(date: @date.iso8601), method: :patch do |f|
+        %div{ style: "display:grid;grid-template-columns:1fr 1fr;gap:16px" }
+          .ds-field
+            = f.label :measure_note, "試した施策（PDCA）", class: "ds-field__label"
+            = f.text_area :measure_note, rows: 4, class: "ds-textarea", placeholder: "例：午後は通知をオフにして25分単位で作業"
+          .ds-field
+            = f.label :reflection, "振り返り", class: "ds-field__label"
+            = f.text_area :reflection, rows: 4, class: "ds-textarea", placeholder: "例：15時台の低下が大きい。休憩の入れ方を見直す"
+        %div{ style: "margin-top:16px" }
+          = f.submit "保存", class: "ds-btn ds-btn--primary"

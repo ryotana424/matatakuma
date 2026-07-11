@@ -1,61 +1,163 @@
 /*
  * Focus Pulse デザインシステム（共通トークン）
  *
- * 3画面（タスク一覧 / 計測 / 日次レポート）で共有するデザインの土台。
- * カラートークン・タイポグラフィ・スペーシング・角丸・モーションをここに集約し、
- * 後続画面はクラスとCSS変数を再利用する。
+ * Claude Design で設計したデザインシステムを移植したもの。
+ * 方向性: 「数値とグラフが主役・静かで低認知負荷・道具としての信頼感」。
+ *   - ライトを基準にダーク両対応（OS設定に追従 + 手動トグル）。
+ *   - コントラストはライト/ダーク双方で WCAG AA 相当を確保。
+ *   - 数値（スコア・時間・時刻）は等幅フォントで桁を揃える。
+ *   - 彩度を抑えた青緑アクセント1色。装飾・グラデーション・アニメーションは最小限。
  *
- * 方向性: 「ディープワーク」のための落ち着いたダークUI。
- *   - 純黒を避けたオフブラック地に、集中を象徴する単一アクセント（ティール）。
- *   - 数値データ（計測時間など）は等幅フォントで視認性を担保。
- *   - 装飾は最小限、モーションは抑制（集中を妨げない）。
+ * 構成:
+ *   1. 新・意味名トークン（--color-* / --text-* / --space-* / --radius-*）を両テーマで定義。
+ *   2. 旧トークン名（--surface-* / --accent 等）を新トークンにエイリアスし、
+ *      既存の全画面クラスを壊さず新配色・両テーマへ移行する。
  */
 
-/* ===== デザイントークン ===== */
+/* ===== 1. 意味名トークン（ライト基準 / ダークは [data-theme] と OS 追従で上書き） ===== */
 :root {
-  /* サーフェス（オフブラックの階層） */
-  --surface-base: #0e1014;       /* ページ背景 */
-  --surface-raised: #161a21;     /* パネル・カード */
-  --surface-overlay: #1e242d;    /* 入力欄・ホバー面 */
-  --surface-line: #2a313c;       /* 罫線・境界 */
+  color-scheme: light dark;
 
-  /* テキスト */
-  --text-strong: #f2f5f8;        /* 見出し・主要数値 */
-  --text-body: #c2c9d4;          /* 本文 */
-  --text-muted: #828c9b;         /* 補足・ラベル */
+  /* サーフェス */
+  --color-bg: #F4F5F6;             /* ページ背景 */
+  --color-surface: #FFFFFF;        /* パネル・カード */
+  --color-surface-sunken: #EEF0F1; /* 入力欄・メーター溝など沈んだ面 */
+  --color-border: #E2E5E8;         /* 罫線・行区切り */
+  --color-border-strong: #C8CDD2;  /* 操作可能要素の境界 */
 
-  /* アクセント（集中＝ティール、単一アクセントで全画面統一） */
-  --accent: #2dd4a7;
-  --accent-strong: #38e0b4;
-  --accent-ink: #06231c;         /* アクセント面に乗せる暗色テキスト */
-  --accent-soft: rgba(45, 212, 167, 0.12);
+  /* テキスト（ink） */
+  --color-ink: #1C2226;            /* 主要テキスト */
+  --color-ink-2: #525C64;          /* 副次テキスト・テーブル見出し */
+  --color-ink-3: #77828A;          /* キャプション・軸ラベル（大きい文字のみ） */
 
-  /* 状態色（タスクのステータス表示用、いずれも控えめな彩度） */
-  --status-todo: #7c8898;
-  --status-doing: #2dd4a7;
-  --status-done: #5b8def;
-  --status-archived: #8b94a7;
-  --status-interrupted: #ff9a8b;
+  /* アクセント */
+  --color-accent: #1F6B84;         /* 操作・リンク・アクティブ */
+  --color-accent-ink: #FFFFFF;     /* アクセント面に乗るテキスト */
+  --color-accent-soft: #E4EEF2;    /* アクセントの淡い地 */
 
-  /* エラー・危険を表す色（バリデーションエラー等で全画面共通利用） */
-  --danger: #ff9a8b;
+  /* チャート */
+  --color-chart-bar: #4E92AC;      /* スコア50以上のバー */
+  --color-chart-bar-low: #B9C6CD;  /* スコア50未満（減彩） */
+  --color-chart-grid: #E7EAEC;     /* グリッド線・データなしのベースライン */
+
+  /* タスク状態（5状態） */
+  --color-state-todo: #5B656D;      --color-state-todo-bg: #ECEFF1;      /* 未着手 */
+  --color-state-active: #1F6B84;    --color-state-active-bg: #E4EEF2;    /* 着手中 */
+  --color-state-done: #2E7D4F;      --color-state-done-bg: #E5F2EA;      /* 完了 */
+  --color-state-archived: #7C868E;  --color-state-archived-bg: #F0F2F3;  /* アーカイブ */
+  --color-state-paused: #9A5B10;    --color-state-paused-bg: #F7EEDF;    /* 中断 */
+
+  --color-focus-ring: #1F6B84;
+  --shadow-panel: 0 1px 2px rgba(28, 34, 38, .05);
 
   /* タイポグラフィ */
-  --font-sans: "Outfit", "Hiragino Sans", "Noto Sans JP", system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", "SFMono-Regular", "Menlo", monospace;
+  --font-sans: "IBM Plex Sans JP", "Hiragino Sans", "Noto Sans JP", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", "SFMono-Regular", "Menlo", monospace;
 
-  /* 角丸（一貫したスケール: カード16 / コントロール10 / ピル999） */
-  --radius-card: 16px;
-  --radius-control: 10px;
-  --radius-pill: 999px;
+  --text-caption: 12px;   /* KPIラベル・表見出し・脚注 */
+  --text-small: 12.5px;   /* チップ・小ボタン */
+  --text-body: 14px;      /* 本文基準 */
+  --text-title: 15px;     /* パネル見出し（700） */
+  --text-heading: 22px;   /* ページ見出し（700） */
+  --text-kpi: 30px;       /* KPI値（mono / 600） */
 
-  /* スペーシング・影 */
-  --space-page: clamp(20px, 5vw, 56px);
-  --shadow-card: 0 18px 48px rgba(0, 0, 0, 0.35);
+  --leading-body: 1.6;
+  --leading-tight: 1.1;   /* KPI値 */
 
-  /* モーション（抑制的・集中を妨げない） */
+  /* スペーシング（4px ベース） */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 32px;
+  --space-8: 64px;
+
+  /* 角丸 */
+  --radius-s: 6px;        /* ボタン・入力・小コントロール */
+  --radius-m: 10px;       /* パネル・KPIカード */
+  --radius-pill: 999px;   /* 状態チップ */
+  --radius-bar: 2px;      /* チャートバー・メーター */
+
+  /* モーション（抑制的・色のみ・150ms 以下） */
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
-  --dur: 0.22s;
+  --dur: 0.12s;
+
+  /* ===== 2. 旧トークン名 → 新トークンへのエイリアス（既存クラス互換） ===== */
+  --surface-base: var(--color-bg);
+  --surface-raised: var(--color-surface);
+  --surface-overlay: var(--color-surface-sunken);
+  --surface-line: var(--color-border);
+  --text-strong: var(--color-ink);
+  /* --text-body はタイポの数値トークンと名前が衝突するため、色は旧名を別途上書き */
+  --text-muted: var(--color-ink-3);
+  --accent: var(--color-accent);
+  --accent-strong: var(--color-accent);
+  --accent-ink: var(--color-accent-ink);
+  --accent-soft: var(--color-accent-soft);
+  --status-todo: var(--color-state-todo);
+  --status-doing: var(--color-state-active);
+  --status-done: var(--color-state-done);
+  --status-archived: var(--color-state-archived);
+  --status-interrupted: var(--color-state-paused);
+  --danger: var(--color-state-paused);
+  --radius-card: var(--radius-m);
+  --radius-control: var(--radius-s);
+  --space-page: clamp(20px, 5vw, 32px);
+  --shadow-card: var(--shadow-panel);
+}
+
+/* ダーク（手動指定） */
+:root[data-theme="dark"] {
+  --color-bg: #131619;
+  --color-surface: #1B2025;
+  --color-surface-sunken: #161B1F;
+  --color-border: #2A3138;
+  --color-border-strong: #3D464E;
+  --color-ink: #E9EDF0;
+  --color-ink-2: #ABB4BC;
+  --color-ink-3: #828D96;
+  --color-accent: #72B7D2;
+  --color-accent-ink: #0F181D;
+  --color-accent-soft: #1D323D;
+  --color-chart-bar: #5E9FB9;
+  --color-chart-bar-low: #3C4750;
+  --color-chart-grid: #252C33;
+  --color-state-todo: #A6B0B8;      --color-state-todo-bg: #242B31;
+  --color-state-active: #72B7D2;    --color-state-active-bg: #1D323D;
+  --color-state-done: #6FBE8E;      --color-state-done-bg: #1E3228;
+  --color-state-archived: #828D96;  --color-state-archived-bg: #20262B;
+  --color-state-paused: #DDA55C;    --color-state-paused-bg: #33291A;
+  --color-focus-ring: #72B7D2;
+  --shadow-panel: none;
+}
+
+/* ダーク（手動未設定時は OS 設定に追従） */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]):not([data-theme="dark"]) {
+    --color-bg: #131619;
+    --color-surface: #1B2025;
+    --color-surface-sunken: #161B1F;
+    --color-border: #2A3138;
+    --color-border-strong: #3D464E;
+    --color-ink: #E9EDF0;
+    --color-ink-2: #ABB4BC;
+    --color-ink-3: #828D96;
+    --color-accent: #72B7D2;
+    --color-accent-ink: #0F181D;
+    --color-accent-soft: #1D323D;
+    --color-chart-bar: #5E9FB9;
+    --color-chart-bar-low: #3C4750;
+    --color-chart-grid: #252C33;
+    --color-state-todo: #A6B0B8;      --color-state-todo-bg: #242B31;
+    --color-state-active: #72B7D2;    --color-state-active-bg: #1D323D;
+    --color-state-done: #6FBE8E;      --color-state-done-bg: #1E3228;
+    --color-state-archived: #828D96;  --color-state-archived-bg: #20262B;
+    --color-state-paused: #DDA55C;    --color-state-paused-bg: #33291A;
+    --color-focus-ring: #72B7D2;
+    --shadow-panel: none;
+  }
 }
 
 /* ===== ベース ===== */
@@ -67,18 +169,24 @@ html, body {
 }
 
 body {
-  background:
-    radial-gradient(1100px 620px at 82% -8%, rgba(45, 212, 167, 0.08), transparent 60%),
-    var(--surface-base);
-  color: var(--text-body);
+  background: var(--color-bg);
+  color: var(--color-ink);
   font-family: var(--font-sans);
-  font-size: 16px;
-  line-height: 1.6;
+  font-size: var(--text-body);
+  line-height: var(--leading-body);
   -webkit-font-smoothing: antialiased;
   min-height: 100dvh;
 }
 
-a { color: var(--accent); text-decoration: none; }
+a { color: var(--color-accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+button, select, textarea, input { font-family: inherit; }
+
+:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
 
 /* ===== レイアウト土台 ===== */
 .app-shell {
@@ -225,7 +333,7 @@ a { color: var(--accent); text-decoration: none; }
 
 .about-panel p,
 .about-panel li {
-  color: var(--text-body);
+  color: var(--color-ink-2);
   font-size: 15px;
 }
 
@@ -298,7 +406,7 @@ a { color: var(--accent); text-decoration: none; }
   justify-content: space-between;
   gap: 16px;
   padding: 5px 0;
-  color: var(--text-body);
+  color: var(--color-ink-2);
   border-top: 1px solid rgba(194, 201, 212, 0.08);
 }
 
@@ -330,7 +438,7 @@ a { color: var(--accent); text-decoration: none; }
 
 .metric-copy span {
   display: block;
-  color: var(--text-body);
+  color: var(--color-ink-2);
   line-height: 1.75;
 }
 
@@ -480,7 +588,7 @@ a { color: var(--accent); text-decoration: none; }
 .btn--ghost {
   background: transparent;
   border-color: var(--surface-line);
-  color: var(--text-body);
+  color: var(--color-ink-2);
 }
 .btn--ghost:hover { border-color: var(--accent); color: var(--text-strong); }
 
@@ -562,7 +670,7 @@ a { color: var(--accent); text-decoration: none; }
 .task-duration {
   font-family: var(--font-mono);
   font-size: 15px;
-  color: var(--text-body);
+  color: var(--color-ink-2);
   font-variant-numeric: tabular-nums;
 }
 
@@ -575,7 +683,7 @@ a { color: var(--accent); text-decoration: none; }
   padding: 4px 12px;
   border-radius: var(--radius-pill);
   border: 1px solid var(--surface-line);
-  color: var(--text-body);
+  color: var(--color-ink-2);
 }
 .status-pill--todo  { color: var(--status-todo);  border-color: rgba(124, 136, 152, 0.4); }
 .status-pill--doing { color: var(--status-doing); border-color: rgba(45, 212, 167, 0.4); background: var(--accent-soft); }
@@ -640,7 +748,7 @@ a { color: var(--accent); text-decoration: none; }
   color: var(--text-muted);
 }
 .empty-state__title {
-  color: var(--text-body);
+  color: var(--color-ink-2);
   font-size: 16px;
   margin: 0 0 6px;
 }
@@ -869,7 +977,7 @@ a { color: var(--accent); text-decoration: none; }
 }
 
 .measure-breakdown__item strong {
-  color: var(--text-body);
+  color: var(--color-ink-2);
   font-weight: 600;
 }
 
@@ -907,7 +1015,7 @@ a { color: var(--accent); text-decoration: none; }
 }
 
 .measure-debug__row strong {
-  color: var(--text-body);
+  color: var(--color-ink-2);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   text-align: right;
@@ -1012,7 +1120,7 @@ a { color: var(--accent); text-decoration: none; }
 }
 
 .report-form__field label {
-  color: var(--text-body);
+  color: var(--color-ink-2);
   font-size: 14px;
   font-weight: 600;
 }
@@ -1154,6 +1262,336 @@ a { color: var(--accent); text-decoration: none; }
 
 .modal-frame {
   display: block;
+}
+
+/* ============================================================
+   Claude Design 由来のコンポーネント層
+   （日次レポート詳細画面のために移植。他画面へも順次展開する）
+   ============================================================ */
+
+/* ===== セグメンテッドコントロール（テーマ切替など 2〜3択） ===== */
+.segmented {
+  display: inline-flex;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-s);
+  overflow: hidden;
+}
+.segmented__btn {
+  padding: 6px 14px;
+  font-size: var(--text-small);
+  border: none;
+  border-left: 1px solid var(--color-border-strong);
+  background: var(--color-surface);
+  color: var(--color-ink-2);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color var(--dur) var(--ease-out), background var(--dur) var(--ease-out);
+}
+.segmented__btn:first-child { border-left: none; }
+.segmented__btn--active {
+  background: var(--color-accent);
+  color: var(--color-accent-ink);
+  font-weight: 500;
+}
+
+/* ===== ページ見出し（日付ナビ付き） ===== */
+.ds-page-title {
+  margin: 0;
+  font-size: var(--text-heading);
+  font-weight: 700;
+  color: var(--color-ink);
+}
+.ds-page-title__sub {
+  font-weight: 400;
+  color: var(--color-ink-2);
+  font-size: 16px;
+  margin-left: 8px;
+}
+
+/* ===== KPIカード ===== */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: var(--space-3);
+}
+.kpi-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-m);
+  box-shadow: var(--shadow-panel);
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.kpi-card__label {
+  font-size: var(--text-caption);
+  color: var(--color-ink-2);
+  letter-spacing: .02em;
+}
+.kpi-card__value {
+  font-family: var(--font-mono);
+  font-size: var(--text-kpi);
+  font-weight: 600;
+  line-height: var(--leading-tight);
+  color: var(--color-ink);
+  font-variant-numeric: tabular-nums;
+}
+.kpi-card__unit {
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--color-ink-3);
+  margin-left: 3px;
+}
+/* 改善候補など「ラベル＋数値」型の値。数値だけ mono、大きさは他KPIと揃える */
+.kpi-card__value--compound {
+  font-family: var(--font-sans);
+  font-size: 16px;
+  font-weight: 700;
+}
+.kpi-card__value--compound .kpi-card__num {
+  font-family: var(--font-mono);
+  font-weight: 600;
+}
+.kpi-card__foot {
+  font-size: var(--text-caption);
+  color: var(--color-ink-3);
+}
+.kpi-card__meter {
+  height: 4px;
+  border-radius: var(--radius-bar);
+  background: var(--color-surface-sunken);
+  overflow: hidden;
+}
+.kpi-card__meter > span {
+  display: block;
+  height: 100%;
+  background: var(--color-chart-bar);
+}
+.kpi-card__meter--warn > span { background: var(--color-state-paused); }
+
+/* ===== パネル（新デザイン。既存 .panel とは別クラスで併存） ===== */
+.ds-panel {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-m);
+  box-shadow: var(--shadow-panel);
+  padding: 20px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.ds-panel__head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+}
+.ds-panel__title {
+  margin: 0;
+  font-size: var(--text-title);
+  font-weight: 700;
+  color: var(--color-ink);
+}
+.ds-panel__hint {
+  font-size: var(--text-caption);
+  color: var(--color-ink-3);
+}
+.ds-panel__actions { margin-left: auto; display: flex; align-items: center; gap: var(--space-3); }
+
+/* ===== 状態バッジ（ドット＋ラベル） ===== */
+.ds-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  font-size: var(--text-caption);
+  font-weight: 500;
+  white-space: nowrap;
+}
+.ds-badge::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.ds-badge--todo     { color: var(--color-state-todo);     background: var(--color-state-todo-bg); }
+.ds-badge--active   { color: var(--color-state-active);   background: var(--color-state-active-bg); }
+.ds-badge--done     { color: var(--color-state-done);     background: var(--color-state-done-bg); }
+.ds-badge--archived { color: var(--color-state-archived); background: var(--color-state-archived-bg); }
+.ds-badge--paused   { color: var(--color-state-paused);   background: var(--color-state-paused-bg); }
+
+/* ===== スコアメーター（表セル内。細いトラック＋数値） ===== */
+.score-meter {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono);
+}
+.score-meter__track {
+  width: 44px;
+  height: 4px;
+  border-radius: var(--radius-bar);
+  background: var(--color-surface-sunken);
+  overflow: hidden;
+  display: inline-block;
+}
+.score-meter__fill {
+  display: block;
+  height: 100%;
+  background: var(--color-chart-bar);
+}
+.score-meter__fill--low { background: var(--color-chart-bar-low); }
+.score-meter__value {
+  font-weight: 500;
+  font-size: var(--text-body);
+  color: var(--color-ink);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ===== 時間帯別バーチャート ===== */
+.hchart { display: flex; flex-direction: column; gap: 8px; }
+.hchart__legend {
+  display: flex;
+  justify-content: flex-end;
+  gap: 14px;
+  font-size: var(--text-caption);
+  color: var(--color-ink-2);
+}
+.hchart__legend span { display: inline-flex; align-items: center; gap: 6px; }
+.hchart__legend i { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+.hchart__legend i.is-high { background: var(--color-chart-bar); }
+.hchart__legend i.is-low { background: var(--color-chart-bar-low); }
+.hchart__body { display: grid; grid-template-columns: 32px 1fr; gap: 8px; }
+.hchart__yaxis {
+  position: relative;
+  height: 150px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-ink-3);
+}
+.hchart__yaxis span { position: absolute; right: 0; }
+.hchart__yaxis span:nth-child(1) { top: -6px; }
+.hchart__yaxis span:nth-child(2) { top: calc(50% - 6px); }
+.hchart__yaxis span:nth-child(3) { bottom: -6px; }
+.hchart__plot { position: relative; height: 150px; }
+.hchart__grid {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  pointer-events: none;
+}
+.hchart__grid i { height: 1px; background: var(--color-chart-grid); }
+.hchart__bars {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: repeat(24, 1fr);
+  gap: 4px;
+  align-items: end;
+}
+.hchart__bar {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  height: 100%;
+}
+.hchart__bar > span {
+  border-radius: var(--radius-bar) var(--radius-bar) 0 0;
+  background: var(--color-chart-bar);
+  min-height: 3px;
+}
+.hchart__bar > span.is-low { background: var(--color-chart-bar-low); }
+.hchart__bar--empty > span {
+  height: 2px;
+  min-height: 2px;
+  border-radius: 1px;
+  background: var(--color-chart-grid);
+}
+.hchart__xaxis-row { display: grid; grid-template-columns: 32px 1fr; gap: 8px; }
+.hchart__xaxis {
+  display: grid;
+  grid-template-columns: repeat(24, 1fr);
+  gap: 4px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--color-ink-3);
+}
+.hchart__xaxis span { text-align: center; }
+
+/* ===== データテーブル（横罫のみ・CSS グリッド行） ===== */
+.ds-table { display: flex; flex-direction: column; color: var(--color-ink); }
+.ds-table__head,
+.ds-table__row {
+  display: grid;
+  gap: 12px;
+  align-items: center;
+  border-bottom: 1px solid var(--color-border);
+}
+.ds-table__head {
+  padding: 8px 12px;
+  font-size: var(--text-caption);
+  color: var(--color-ink-2);
+}
+.ds-table__row { padding: 12px; font-size: var(--text-body); }
+.ds-table__row:last-child { border-bottom: none; }
+.ds-table__cell--right { text-align: right; }
+.ds-table__cell--mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.ds-table__task { display: flex; flex-direction: column; }
+.ds-table__task-name { font-weight: 500; }
+.ds-table__task-range { font-size: 12px; color: var(--color-ink-3); font-family: var(--font-mono); }
+
+/* ===== ボタン（新デザイン。既存 .btn と併存させるため .ds-btn） ===== */
+.ds-btn {
+  padding: 8px 20px;
+  border-radius: var(--radius-s);
+  font-size: 13.5px;
+  font-weight: 500;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  white-space: nowrap;
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-surface);
+  color: var(--color-ink-2);
+  transition: color var(--dur), border-color var(--dur), opacity var(--dur);
+}
+.ds-btn:hover { color: var(--color-accent); border-color: var(--color-accent); }
+.ds-btn--primary {
+  border-color: var(--color-accent);
+  background: var(--color-accent);
+  color: var(--color-accent-ink);
+}
+.ds-btn--primary:hover { color: var(--color-accent-ink); opacity: .9; }
+.ds-btn--icon { width: 32px; height: 32px; padding: 0; display: inline-grid; place-items: center; }
+.ds-btn--sm { padding: 6px 12px; font-size: 13px; }
+
+/* ===== 入力・セレクト・テキストエリア（新デザイン） ===== */
+.ds-select {
+  padding: 6px 8px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-s);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font-size: 13px;
+  font-family: var(--font-sans);
+  min-width: 0;
+}
+.ds-field { display: flex; flex-direction: column; gap: 6px; }
+.ds-field__label { font-size: var(--text-caption); color: var(--color-ink-2); }
+.ds-textarea {
+  resize: vertical;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-s);
+  background: var(--color-surface-sunken);
+  color: var(--color-ink);
+  font-size: 13.5px;
+  line-height: 1.7;
+  font-family: var(--font-sans);
+  width: 100%;
 }
 
 /* モーション抑制 */
