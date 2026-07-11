@@ -63,5 +63,5 @@
       .report-chart
         %canvas{ data: { controller: "report-chart",
                          report_chart_labels_value: @applied_metrics.keys.to_json,
-                         report_chart_datasets_value: [{ label: "施策あり", data: @applied_metrics.values, backgroundColor: "#2dd4a7" }, { label: "施策なし", data: @others_metrics.values, backgroundColor: "#828c9b" }].to_json,
+                         report_chart_datasets_value: [{ label: "施策あり", data: @applied_metrics.values }, { label: "施策なし", data: @others_metrics.values }].to_json,
                          report_chart_suggested_max_value: 100 } }

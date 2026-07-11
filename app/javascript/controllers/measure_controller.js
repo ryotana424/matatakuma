@@ -504,14 +504,20 @@ export default class extends Controller {
     document.cookie = `${encodeURIComponent(name)}=${encodeURIComponent(value)}; Max-Age=${maxAge}; Path=/; SameSite=Lax`
   }
 
+  // canvas 描画色は CSS のデザイントークンから読む（ライト/ダーク両テーマに追従）
+  themeColor(name, fallback) {
+    const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim()
+    return value || fallback
+  }
+
   drawPrivacySurface() {
     this.syncCanvasSize()
-    this.ctx.fillStyle = "#111720"
+    this.ctx.fillStyle = this.themeColor("--color-surface-sunken", "#111720")
     this.ctx.fillRect(0, 0, this.canvasTarget.width, this.canvasTarget.height)
   }
 
   drawIdleCanvas() {
-    this.ctx.fillStyle = "#111720"
+    this.ctx.fillStyle = this.themeColor("--color-surface-sunken", "#111720")
     this.ctx.fillRect(0, 0, this.canvasTarget.width, this.canvasTarget.height)
   }
 
@@ -529,11 +535,16 @@ export default class extends Controller {
       return height - pad - normalized * (height - pad * 2)
     }
 
+    const surfaceColor = this.themeColor("--color-surface-sunken", "#111720")
+    const gridColor = this.themeColor("--color-chart-grid", "rgba(42, 49, 60, 0.9)")
+    const labelColor = this.themeColor("--color-ink-3", "rgba(130, 140, 155, 0.8)")
+    const lineColor = this.themeColor("--color-chart-bar", "#2dd4a7")
+
     ctx.clearRect(0, 0, width, height)
-    ctx.fillStyle = "#111720"
+    ctx.fillStyle = surfaceColor
     ctx.fillRect(0, 0, width, height)
 
-    ctx.strokeStyle = "rgba(42, 49, 60, 0.9)"
+    ctx.strokeStyle = gridColor
     ctx.lineWidth = 1
     for (let x = plotLeft; x <= width - pad; x += 48) {
       ctx.beginPath()
@@ -547,14 +558,14 @@ export default class extends Controller {
       ctx.moveTo(plotLeft, y)
       ctx.lineTo(width, y)
       ctx.stroke()
-      ctx.fillStyle = "rgba(130, 140, 155, 0.75)"
-      ctx.font = "10px JetBrains Mono, monospace"
+      ctx.fillStyle = labelColor
+      ctx.font = "10px 'IBM Plex Mono', monospace"
       ctx.fillText(String(score), pad, y + 3)
     })
 
     if (this.scoreHistory.length === 0) {
-      ctx.fillStyle = "rgba(130, 140, 155, 0.8)"
-      ctx.font = "12px JetBrains Mono, monospace"
+      ctx.fillStyle = labelColor
+      ctx.font = "12px 'IBM Plex Mono', monospace"
       ctx.fillText("WAITING", plotLeft, height / 2 + 4)
       return
     }
@@ -567,7 +578,7 @@ export default class extends Controller {
       if (index === 0) ctx.moveTo(x, y)
       else ctx.lineTo(x, y)
     })
-    ctx.strokeStyle = "#2dd4a7"
+    ctx.strokeStyle = lineColor
     ctx.lineWidth = 2
     ctx.stroke()
   }
@@ -584,8 +595,9 @@ export default class extends Controller {
       this.ctx.fill()
     }
 
-    drawPoint(LM.leftIris, 4, "#2dd4a7")
-    drawPoint(LM.rightIris, 4, "#2dd4a7")
+    const irisColor = this.themeColor("--color-accent", "#2dd4a7")
+    drawPoint(LM.leftIris, 4, irisColor)
+    drawPoint(LM.rightIris, 4, irisColor)
     drawPoint(LM.nose, 3, "rgba(242, 245, 248, 0.75)")
   }
 

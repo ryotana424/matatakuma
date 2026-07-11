@@ -6,10 +6,29 @@ import Chart from "chart.js/auto"
 export default class extends Controller {
   static values = { labels: Array, datasets: Array, suggestedMax: Number }
 
+  // チャートの軸・グリッド・凡例・バーの色は CSS のデザイントークンから読む
+  // （ライト/ダーク両テーマに追従。データセット側で色未指定ならトークン色を補う）
+  themeColor(name, fallback) {
+    const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim()
+    return value || fallback
+  }
+
   connect() {
+    const axisColor = this.themeColor("--color-ink-3", "#828c9b")
+    const gridColor = this.themeColor("--color-chart-grid", "rgba(42, 49, 60, 0.9)")
+    const legendColor = this.themeColor("--color-ink", "#f2f5f8")
+    const barColor = this.themeColor("--color-chart-bar", "#4E92AC")
+    const barLowColor = this.themeColor("--color-chart-bar-low", "#B9C6CD")
+    const palette = [barColor, barLowColor]
+
+    const datasets = this.datasetsValue.map((dataset, index) => ({
+      backgroundColor: palette[index % palette.length],
+      ...dataset,
+    }))
+
     this.chart = new Chart(this.element, {
       type: "bar",
-      data: { labels: this.labelsValue, datasets: this.datasetsValue },
+      data: { labels: this.labelsValue, datasets },
       options: {
         responsive: true,
         maintainAspectRatio: false,
@@ -17,16 +36,16 @@ export default class extends Controller {
           y: {
             beginAtZero: true,
             suggestedMax: this.hasSuggestedMaxValue ? this.suggestedMaxValue : undefined,
-            ticks: { color: "#828c9b" },
-            grid: { color: "rgba(42, 49, 60, 0.9)" },
+            ticks: { color: axisColor },
+            grid: { color: gridColor },
           },
           x: {
-            ticks: { color: "#828c9b" },
+            ticks: { color: axisColor },
             grid: { display: false },
           },
         },
         plugins: {
-          legend: { labels: { color: "#f2f5f8" } },
+          legend: { labels: { color: legendColor } },
         },
       },
     })
