@@ -4,45 +4,52 @@
 - status_action_options = [["未着手", "todo"], ["着手中", "doing"], ["完了", "done"], ["アーカイブ", "archived"], ["中断", "interrupted"]]
 
 -# open value は .to_s で文字列化する（Hamlは属性値がfalseだと属性自体を省略するため）
-.task-panel{ data: { controller: "task-modal", task_modal_open_value: form_task.errors.any?.to_s } }
+%section.task-panel.panel{ "aria-label": "タスク一覧", data: { controller: "task-modal", task_modal_open_value: form_task.errors.any?.to_s } }
   .task-panel__head
     %h2.task-panel__title タスク一覧
-    %button.btn.btn--primary{ type: "button", data: { action: "task-modal#open" } } ＋ タスク追加
+    %button.btn.btn--ghost.task-panel__add{ type: "button", data: { action: "task-modal#open" } } ＋ タスク追加
 
   - if tasks.any?
-    %table.task-table.panel
-      %thead
-        %tr
-          %th タスク
-          %th 状態
-          %th 計測時間合計
-          %th 集中度総量
-          %th 平均集中スコア
-          %th{ "aria-label": "操作" }
-      %tbody
-        - tasks.each do |task|
-          %tr
-            %td.task-name{ "data-label": "タスク" }= task.name
-            %td{ "data-label": "状態" }
-              - if task.sessions.exists?
-                = form_with model: task, url: task_path(task), method: :patch, class: "task-status-form" do |f|
-                  = f.select :status, status_action_options, { selected: task.status }, class: "status-pill task-status-select status-pill--#{task.status}", "aria-label": "#{task.name}の状態", onchange: "this.form.requestSubmit()"
-              - else
-                %span.status-pill{ class: "status-pill--#{task.status}" }= status_labels[task.status]
-            %td.task-duration{ "data-label": "計測時間合計" }= format_duration(task.total_duration_sec)
-            %td.task-duration{ "data-label": "集中度総量" }= task.focus_volume ? format_focus_volume(task.focus_volume) : "--"
-            %td.task-duration{ "data-label": "平均集中スコア" }= task.average_score || "--"
-            %td{ "data-label": "操作" }
-              .task-actions
-                - if current_task == task
-                  %span.measure-link.measure-link--current 計測中
-                - else
-                  = link_to measure_task_path(task), class: "measure-link" do
-                    %svg{ width: "15", height: "15", viewBox: "0 0 24 24", fill: "currentColor", "aria-hidden": "true" }
-                      %path{ d: "M8 5v14l11-7z" }
-                    計測開始
+    .task-grid
+      .task-grid__head
+        %span タスク名
+        %span 状態
+        %span.task-grid__num 計測時間合計
+        %span.task-grid__num 集中度総量
+        %span.task-grid__num 平均集中スコア
+        %span 操作
+      - tasks.each do |task|
+        - measuring = current_task == task
+        .task-grid__row{ class: ("task-grid__row--measuring" if measuring) }
+          %span.task-grid__name
+            = task.name
+            - if measuring
+              %span.task-grid__measuring
+                %span.task-grid__measuring-dot{ "aria-hidden": true }
+                計測中
+          %span
+            - if task.sessions.exists?
+              = form_with model: task, url: task_path(task), method: :patch, class: "task-status-form" do |f|
+                = f.select :status, status_action_options, { selected: task.status }, class: "status-pill task-status-select status-pill--#{task.status}", "aria-label": "#{task.name}の状態", onchange: "this.form.requestSubmit()"
+            - else
+              %span.status-pill{ class: "status-pill--#{task.status}" }= status_labels[task.status]
+          %span.task-grid__num.task-grid__mono= format_duration(task.total_duration_sec)
+          %span.task-grid__num.task-grid__mono= task.focus_volume ? format_focus_volume(task.focus_volume) : "—"
+          %span.task-grid__score
+            %span.task-grid__bar{ "aria-hidden": true }
+              %span.task-grid__bar-fill{ style: "width:#{task.average_score || 0}%" }
+            %span.task-grid__mono= task.average_score || "—"
+          %span.task-grid__ops
+            - if measuring
+              %button.task-btn.task-btn--stop{ type: "button", data: { action: "measure#stop" } }
+                %span.task-btn__stop-icon{ "aria-hidden": true }
+                計測終了
+            - else
+              = link_to measure_task_path(task), class: "task-btn" do
+                %span.task-btn__play-icon{ "aria-hidden": true }
+                計測開始
   - else
-    .panel.empty-state
+    .empty-state
       %p.empty-state__title まだタスクがありません
       %p 「＋ タスク追加」から最初のタスクを追加してください。
 

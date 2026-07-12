@@ -1,23 +1,22 @@
 - content_for(:title) { "Focus Pulse" }
+- content_for(:header) { render "page_header", current: :tasks }
 
-.measure-page
-  .page-head.measure-head
-    %div
-      %p.measure-kicker MEASUREMENT
-      %h1.page-title 計測を始めましょう
-      %p.page-lead 下のタスク一覧から「計測開始」を押すとカメラ計測が始まります。
+- daily_summary = SessionAnalytics.summary(@daily_sessions)
+- daily_volume = SessionAnalytics.focus_volume(@daily_sessions) || 0
 
+.fp-page
   -# タスク未選択時のカメラプレースホルダー（計測はタスク選択後に開始）
   %section.panel.measure-camera.measure-camera--idle{ "aria-label": "カメラ計測" }
+    %h2.measure-camera__title
+      カメラ
+      %span.measure-camera__task 計測を始めましょう
     .measure-canvas-wrap
       .measure-camera__empty
         %span.measure-camera__dot
-        %span タスクを選んで計測開始
+        %span 下のタスクから「計測開始」を押すと計測が始まります
 
   = render "status_bar", daily_sessions: @daily_sessions
 
   = render "task_list", tasks: @tasks, form_task: @task, current_task: nil
 
-%footer.page-foot
-  = link_to "日次レポートを見る", reports_path, class: "btn btn--ghost"
-  = link_to "施策一覧を見る", interventions_path, class: "btn btn--ghost"
+  = render "privacy_footer"

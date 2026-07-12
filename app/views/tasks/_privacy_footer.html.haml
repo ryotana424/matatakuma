@@ -1,0 +1,11 @@
+-# フッター（デザイン準拠: 左にプライバシー注記、右にテーマ切替）
+%footer.fp-footer
+  %span.fp-footer__note
+    %span.fp-footer__dot{ "aria-hidden": true }
+    映像・画像・座標はサーバに送信されません。すべてブラウザ内で処理され、保存されるのは集計値のみです。
+  .fp-footer__theme
+    %span.fp-footer__theme-label テーマ
+    %div.segmented{ role: "group", "aria-label": "テーマ切替", data: { controller: "theme" } }
+      %button.segmented__btn{ type: "button", data: { theme_target: "btn", theme_theme_param: "auto", action: "theme#select" } } 自動
+      %button.segmented__btn{ type: "button", data: { theme_target: "btn", theme_theme_param: "light", action: "theme#select" } } ライト
+      %button.segmented__btn{ type: "button", data: { theme_target: "btn", theme_theme_param: "dark", action: "theme#select" } } ダーク

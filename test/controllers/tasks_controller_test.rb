@@ -6,7 +6,7 @@ class TasksControllerTest < ActionDispatch::IntegrationTest
     get tasks_url
     assert_response :success
     assert_select "title", /Focus Pulse/
-    assert_select ".app-brand__name", "Focus Pulse"
+    assert_select ".fp-brand__name", "Focus Pulse"
     assert_select "body", /資料作成/
   end
 
@@ -67,8 +67,8 @@ class TasksControllerTest < ActionDispatch::IntegrationTest
 
     get tasks_url
 
-    assert_select "th", "平均集中スコア"
-    assert_select "td[data-label='平均集中スコア']", "78"
+    assert_select ".task-grid__head span", "平均集中スコア"
+    assert_select ".task-grid__row .task-grid__score", /78/
   end
 
   test "タスク一覧に集中度総量が平均集中スコアの左に表示される" do
@@ -82,9 +82,9 @@ class TasksControllerTest < ActionDispatch::IntegrationTest
 
     get tasks_url
 
-    assert_select "thead th:nth-child(4)", "集中度総量"
-    assert_select "thead th:nth-child(5)", "平均集中スコア"
-    assert_select "td[data-label='集中度総量']", "2.1k"
+    assert_select ".task-grid__head span:nth-child(4)", "集中度総量"
+    assert_select ".task-grid__head span:nth-child(5)", "平均集中スコア"
+    assert_select ".task-grid__row", /2\.1k/
   end
 
   test "計測済みタスクは状態欄のプルダウンで変更できる" do
@@ -93,13 +93,13 @@ class TasksControllerTest < ActionDispatch::IntegrationTest
 
     get tasks_url
 
-    assert_select "td[data-label='状態'] form[action='#{task_path(task)}'] select[name='task[status]'][onchange='this.form.requestSubmit()']"
+    assert_select ".task-grid__row form[action='#{task_path(task)}'] select[name='task[status]'][onchange='this.form.requestSubmit()']"
     assert_select "option[value=todo]", "未着手"
     assert_select "option[value=doing][selected=selected]", "着手中"
     assert_select "option[value=done]", "完了"
     assert_select "option[value=archived]", "アーカイブ"
     assert_select "option[value=interrupted]", "中断"
-    assert_select "td[data-label='操作'] form[action='#{task_path(task)}']", count: 0
+    assert_select ".task-grid__ops form[action='#{task_path(task)}']", count: 0
   end
 
   test "未計測タスクは状態欄に表示だけ出す" do
@@ -107,18 +107,19 @@ class TasksControllerTest < ActionDispatch::IntegrationTest
 
     get tasks_url
 
-    assert_select "td[data-label='状態'] .status-pill", "未着手"
-    assert_select "td[data-label='状態'] select[name='task[status]']", count: 0
+    assert_select ".task-grid__row .status-pill", "未着手"
+    assert_select ".task-grid__row select[name='task[status]']", count: 0
   end
 
   test "計測画面が表示できる" do
     task = Task.create!(name: "計測タスク")
     get measure_task_url(task)
     assert_response :success
-    assert_select "h1.page-title", "計測タスク"
+    assert_select ".measure-camera__task", "計測タスク"
     assert_select "body", { text: /計測中: 計測タスク/, count: 0 }
-    assert_select "button", { text: /計測開始/, count: 0 }
     assert_select "button", /計測終了して保存/
+    # 計測開始は他タスク行にはあり得るが、リンク（a要素）であってbuttonではない
+    assert_select "button", { text: /計測開始/, count: 0 }
   end
 
   test "未着手タスクの計測画面を開くと着手中にする" do
@@ -142,8 +143,8 @@ class TasksControllerTest < ActionDispatch::IntegrationTest
     get measure_task_url(task)
 
     assert_response :success
-    assert_select "[data-measure-target='sessionAverage']", "--"
-    assert_select ".measure-breakdown__item", text: /前回セッション平均\s+84/
+    assert_select "[data-measure-target='sessionAverage']", "—"
+    assert_select ".measure-stats__num--muted", "84"
     assert_not_includes response.body, ">#{older.avg_score}<"
   end
 
@@ -175,7 +176,7 @@ class TasksControllerTest < ActionDispatch::IntegrationTest
 
   test "一覧ページにカメラプレースホルダーが表示される" do
     get tasks_url
-    assert_select ".measure-camera__empty", /タスクを選んで計測開始/
+    assert_select ".measure-camera__empty", /「計測開始」を押すと計測が始まります/
   end
 
   test "一覧ページに本日のステータスバーが表示される" do
@@ -206,11 +207,16 @@ class TasksControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "計測ページに本日のステータスバーが表示される" do
+  test "計測ページのスコアパネルに本日の集計が表示される" do
     task = Task.create!(name: "計測対象")
     get measure_task_url(task)
     assert_response :success
-    assert_select ".daily-status-bar"
+    # 本日の集計はスコアパネル内の「本日」ブロックへ統合されている
+    assert_select ".measure-stats__group--today" do
+      assert_select "[data-measure-target='dailyDuration']"
+      assert_select "[data-measure-target='dailyFocusVolume']"
+      assert_select "[data-measure-target='dailyAverage']"
+    end
   end
 
   test "計測ページにタスク一覧が表示され計測中タスクにはリンクが出ない" do
@@ -220,9 +226,9 @@ class TasksControllerTest < ActionDispatch::IntegrationTest
     get measure_task_url(task)
 
     assert_response :success
-    assert_select ".task-panel .task-table"
+    assert_select ".task-panel .task-grid"
     assert_select "body", /別タスク/
     # 計測中の行は「計測中」ラベルになり計測開始リンクを出さない
-    assert_select ".measure-link--current", "計測中"
+    assert_select ".task-grid__row--measuring .task-grid__measuring", /計測中/
   end
 end

@@ -1,0 +1,14 @@
+-# 計測・タスク一覧画面のヘッダー（デザイン準拠: ブランド＋パンくず）
+-# current: :measure か :tasks。パンくずの現在地表示に使う
+- current ||= :tasks
+%header.fp-header
+  = link_to root_path, class: "fp-brand" do
+    %span.fp-brand__mark{ "aria-hidden": true }
+    %span.fp-brand__name Focus Pulse
+  %nav.fp-crumbs{ "aria-label": "パンくず" }
+    - if current == :measure
+      %span.fp-crumbs__here 計測
+    - else
+      = link_to "計測", root_path, class: "fp-crumbs__link"
+    %span.fp-crumbs__sep /
+    = link_to "日次レポート", reports_path, class: "fp-crumbs__link", data: { turbo_frame: "modal" }

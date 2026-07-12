@@ -5,7 +5,12 @@ import { aggregateSession, averageFocusableScore, focusVolume } from "focus/aggr
 import { faceAbsenceDeadlineMs } from "focus/absence_timeout"
 
 const WINDOW_MS = 30000
-const SCORE_HISTORY_MAX_POINTS = 30 * 60
+// スコア推移グラフは「直近30分」を実時間で描く。各サンプルは記録時刻(t)を持つ。
+const TREND_WINDOW_MS = 30 * 60 * 1000
+// サンプル間隔(=1秒)より十分大きい間隔が空いたら「離席などで途切れた」とみなし線を分割する
+const TREND_GAP_MS = 5000
+// メモリ上限（1秒1点で30分ぶん + 余裕）。実際の可視範囲は t で判定する
+const SCORE_HISTORY_MAX_POINTS = 30 * 60 + 60
 const CAMERA_DEVICE_COOKIE = "focus_pulse_camera_device_id"
 const CAMERA_DEVICE_COOKIE_MAX_AGE = 60 * 60 * 24 * 180
 
@@ -197,7 +202,8 @@ export default class extends Controller {
     this.updateDailyStatus()
 
     if (isFaceTemporarilyAbsent(this.frameBuffer)) {
-      this.scoreTarget.textContent = "--"
+      this.scoreTarget.textContent = "—"
+      this.scoreTarget.dataset.state = "interrupted"
       this.stateTarget.textContent = this.stateLabel("interrupted")
       this.stateTarget.dataset.state = "interrupted"
       this.updateDebugPanel({ interrupted: true })
@@ -214,9 +220,18 @@ export default class extends Controller {
     const state = classifyState(score, metrics.facePresent)
     this.samples.push({ score, state, metrics })
     this.updateSessionAverage()
-    this.scoreHistory.push(score)
-    if (this.scoreHistory.length > SCORE_HISTORY_MAX_POINTS) this.scoreHistory.shift()
+    // 記録時刻つきで保持し、グラフは実時間で描く（離席で途切れた区間も正しく空く）
+    const now = Date.now()
+    this.scoreHistory.push({ t: now, score })
+    // 直近30分より古いサンプルは捨てる（安全のため件数上限も併用）
+    while (
+      this.scoreHistory.length > 0 &&
+      (now - this.scoreHistory[0].t > TREND_WINDOW_MS || this.scoreHistory.length > SCORE_HISTORY_MAX_POINTS)
+    ) {
+      this.scoreHistory.shift()
+    }
     this.scoreTarget.textContent = score
+    this.scoreTarget.dataset.state = state
     this.stateTarget.textContent = this.stateLabel(state)
     this.stateTarget.dataset.state = state
     this.drawScoreTrend()
@@ -526,61 +541,82 @@ export default class extends Controller {
     const ctx = this.pulseCtx
     const width = canvas.width
     const height = canvas.height
-    const pad = 10
-    const labelPad = 26
-    const plotLeft = pad + labelPad
-    const plotWidth = width - plotLeft - pad
+    // 軸ラベルは HTML 側（.measure-pulse__y / __x）で重ねるため、canvas は全幅で描く
+    const plotWidth = width
     const scoreToY = (score) => {
       const normalized = Math.max(0, Math.min(1, score / 100))
-      return height - pad - normalized * (height - pad * 2)
+      // 上端 1px / 下端 1px の余白を残す（デザインのグリッド線位置に合わせる）
+      return 1 + (1 - normalized) * (height - 2)
     }
 
-    const surfaceColor = this.themeColor("--color-surface-sunken", "#111720")
     const gridColor = this.themeColor("--color-chart-grid", "rgba(42, 49, 60, 0.9)")
-    const labelColor = this.themeColor("--color-ink-3", "rgba(130, 140, 155, 0.8)")
     const lineColor = this.themeColor("--color-chart-bar", "#2dd4a7")
 
+    // 背景は塗らずパネル面へ直置きする（デザインのフラットなチャートに合わせる）
     ctx.clearRect(0, 0, width, height)
-    ctx.fillStyle = surfaceColor
-    ctx.fillRect(0, 0, width, height)
 
     ctx.strokeStyle = gridColor
     ctx.lineWidth = 1
-    for (let x = plotLeft; x <= width - pad; x += 48) {
+    // 縦グリッド（-30/-20/-10/現在 の目盛りに合わせて等間隔）
+    for (let i = 1; i < 4; i++) {
+      const x = (i / 4) * width
       ctx.beginPath()
       ctx.moveTo(x, 0)
       ctx.lineTo(x, height)
       ctx.stroke()
     }
+    // 横グリッド（100 / 50 / 0）
     ;[0, 50, 100].forEach((score) => {
       const y = scoreToY(score)
       ctx.beginPath()
-      ctx.moveTo(plotLeft, y)
+      ctx.moveTo(0, y)
       ctx.lineTo(width, y)
       ctx.stroke()
-      ctx.fillStyle = labelColor
-      ctx.font = "10px 'IBM Plex Mono', monospace"
-      ctx.fillText(String(score), pad, y + 3)
     })
 
-    if (this.scoreHistory.length === 0) {
-      ctx.fillStyle = labelColor
-      ctx.font = "12px 'IBM Plex Mono', monospace"
-      ctx.fillText("WAITING", plotLeft, height / 2 + 4)
-      return
+    if (this.scoreHistory.length === 0) return
+
+    // X軸は「直近30分」の実時間で固定する。右端(=plotWidth)が現在(now)、左端(=0)が30分前。
+    // 各サンプルは記録時刻 t から x を求めるので、離席で記録が途切れた区間は自然に空く。
+    const now = Date.now()
+    const xForTime = (t) => plotWidth - ((now - t) / TREND_WINDOW_MS) * plotWidth
+
+    ctx.strokeStyle = lineColor
+    ctx.lineWidth = 1.5
+    ctx.lineJoin = "round"
+
+    // 連続サンプル（間隔が TREND_GAP_MS 以内）ごとに区切って線を引く。
+    // 途切れをまたいで直線で結ばないことで、離席の空白を表現する。
+    let segment = []
+    const flush = () => {
+      if (segment.length === 1) {
+        // 単独サンプルは線が引けないので点を打つ
+        ctx.fillStyle = lineColor
+        ctx.beginPath()
+        ctx.arc(segment[0].x, segment[0].y, 1.5, 0, Math.PI * 2)
+        ctx.fill()
+      } else if (segment.length > 1) {
+        ctx.beginPath()
+        segment.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)))
+        ctx.stroke()
+      }
+      segment = []
     }
 
-    const visibleMaxIndex = Math.max(Math.min(this.scoreHistory.length, SCORE_HISTORY_MAX_POINTS) - 1, 1)
-    ctx.beginPath()
-    this.scoreHistory.forEach((score, index) => {
-      const x = plotLeft + (index / visibleMaxIndex) * plotWidth
-      const y = scoreToY(score)
-      if (index === 0) ctx.moveTo(x, y)
-      else ctx.lineTo(x, y)
+    let prevT = null
+    this.scoreHistory.forEach(({ t, score }) => {
+      if (prevT !== null && t - prevT > TREND_GAP_MS) flush()
+      segment.push({ x: xForTime(t), y: scoreToY(score) })
+      prevT = t
     })
-    ctx.strokeStyle = lineColor
-    ctx.lineWidth = 2
-    ctx.stroke()
+    flush()
+
+    // 現在地マーカー（最新サンプルを右端付近に点で示す）
+    const last = this.scoreHistory[this.scoreHistory.length - 1]
+    ctx.fillStyle = lineColor
+    ctx.beginPath()
+    ctx.arc(xForTime(last.t), scoreToY(last.score), 2, 0, Math.PI * 2)
+    ctx.fill()
   }
 
   drawLandmarks(lm) {

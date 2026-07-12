@@ -47,6 +47,10 @@
   --color-state-archived: #7C868E;  --color-state-archived-bg: #F0F2F3;  /* アーカイブ */
   --color-state-paused: #9A5B10;    --color-state-paused-bg: #F7EEDF;    /* 中断 */
 
+  /* カメラ面：映像が映えるようライト/ダーク問わず暗い地色にする */
+  --color-camera-bg: #20262B;
+  --color-camera-ink: #ABB4BC;
+
   --color-focus-ring: #1F6B84;
   --shadow-panel: 0 1px 2px rgba(28, 34, 38, .05);
 
@@ -129,6 +133,8 @@
   --color-state-done: #6FBE8E;      --color-state-done-bg: #1E3228;
   --color-state-archived: #828D96;  --color-state-archived-bg: #20262B;
   --color-state-paused: #DDA55C;    --color-state-paused-bg: #33291A;
+  --color-camera-bg: #10151A;
+  --color-camera-ink: #828D96;
   --color-focus-ring: #72B7D2;
   --shadow-panel: none;
 }
@@ -155,6 +161,8 @@
     --color-state-done: #6FBE8E;      --color-state-done-bg: #1E3228;
     --color-state-archived: #828D96;  --color-state-archived-bg: #20262B;
     --color-state-paused: #DDA55C;    --color-state-paused-bg: #33291A;
+    --color-camera-bg: #10151A;
+    --color-camera-ink: #828D96;
     --color-focus-ring: #72B7D2;
     --shadow-panel: none;
   }
@@ -194,6 +202,107 @@ button, select, textarea, input { font-family: inherit; }
   max-width: 960px;
   margin: 0 auto;
   padding: var(--space-page);
+}
+
+/* 計測・タスク一覧はデザイン準拠の広いキャンバス（内容 1140px / 専用ヘッダー）
+   デザインは content-box 基準で内容 1140px を確保しているため合わせる */
+.app-shell:has(.fp-page) {
+  box-sizing: content-box;
+  max-width: 1140px;
+  padding: 28px 32px 64px;
+}
+
+/* ===== デザイン準拠ヘッダー（ブランド＋パンくず） ===== */
+.fp-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.fp-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.fp-brand__mark {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: var(--color-accent);
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.fp-brand__mark::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-accent-ink);
+}
+
+.fp-brand__name {
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: 0.01em;
+  color: var(--color-ink);
+}
+
+.fp-crumbs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--color-ink-3);
+}
+
+.fp-crumbs__here {
+  color: var(--color-ink);
+}
+
+.fp-crumbs__link {
+  color: var(--color-ink-2);
+}
+
+/* ===== デザイン準拠フッター（プライバシー注記＋テーマ切替） ===== */
+.fp-footer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--color-border);
+}
+
+.fp-footer__note {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--color-ink-3);
+}
+
+.fp-footer__dot {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-state-done);
+}
+
+.fp-footer__theme {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.fp-footer__theme-label {
+  font-size: 12px;
+  color: var(--color-ink-3);
 }
 
 /* グローバルヘッダー（全画面共通） */
@@ -469,17 +578,165 @@ button, select, textarea, input { font-family: inherit; }
 }
 
 /* ===== 統合ページ：タスク一覧パネルとタスク追加モーダル ===== */
+/* ===== タスク一覧（デザイン準拠のグリッドテーブル） ===== */
+.task-panel {
+  padding: 20px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
 .task-panel__head {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 12px;
-  margin-bottom: 12px;
 }
 
 .task-panel__title {
-  font-size: 18px;
-  color: var(--text-strong);
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--color-ink);
+}
+
+.task-panel__add {
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+/* 6列グリッド。ヘッダー行と各データ行で列定義を共有する */
+.task-grid {
+  display: flex;
+  flex-direction: column;
+}
+
+.task-grid__head,
+.task-grid__row {
+  display: grid;
+  grid-template-columns: 1.8fr 1fr 0.9fr 0.9fr 1fr 1fr;
+  gap: 12px;
+  align-items: center;
+}
+
+.task-grid__head {
+  padding: 8px 12px;
+  font-size: 12px;
+  color: var(--color-ink-2);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.task-grid__row {
+  padding: 11px 12px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.task-grid__row--measuring {
+  background: var(--color-accent-soft);
+}
+
+.task-grid__num {
+  text-align: right;
+  justify-self: end;
+}
+
+.task-grid__mono {
+  font-family: var(--font-mono);
+}
+
+.task-grid__name {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  font-weight: 500;
+}
+
+.task-grid__measuring {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-accent);
+  white-space: nowrap;
+}
+
+.task-grid__measuring-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-accent);
+}
+
+/* 平均集中スコア：ミニバー＋数値 */
+.task-grid__score {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.task-grid__bar {
+  width: 44px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--color-surface-sunken);
+  overflow: hidden;
+  display: inline-block;
+}
+
+.task-grid__bar-fill {
+  display: block;
+  height: 100%;
+  background: var(--color-chart-bar);
+}
+
+.task-grid__ops {
+  display: flex;
+  justify-content: flex-start;
+}
+
+/* 計測開始／終了ボタン（行内のコンパクトなアクション） */
+.task-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 14px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-s);
+  background: var(--color-surface);
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--color-accent);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: border-color var(--dur) var(--ease-out),
+              background var(--dur) var(--ease-out);
+}
+
+.task-btn:hover {
+  border-color: var(--color-accent);
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+  text-decoration: none;
+}
+
+.task-btn--stop {
+  border-color: var(--color-accent);
+}
+
+.task-btn__play-icon {
+  width: 0;
+  height: 0;
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  border-left: 7px solid currentColor;
+}
+
+.task-btn__stop-icon {
+  width: 8px;
+  height: 8px;
+  background: currentColor;
 }
 
 .task-modal__dialog {
@@ -492,8 +749,10 @@ button, select, textarea, input { font-family: inherit; }
   color: var(--text-strong);
 }
 
+/* タスク未選択（index）のカメラ面は全幅パネルなので 4:3 を外して低く抑える */
 .measure-camera--idle .measure-canvas-wrap {
-  min-height: 240px;
+  aspect-ratio: auto;
+  min-height: 260px;
 }
 
 .measure-link--current {
@@ -758,48 +1017,45 @@ button, select, textarea, input { font-family: inherit; }
   margin-top: 32px;
   display: flex;
   justify-content: flex-end;
+  gap: 10px;
 }
 
-/* ===== 計測画面 ===== */
-.measure-page {
-  display: grid;
-  gap: 24px;
-}
-
-.measure-head {
+/* プライバシー注記フッター（映像を送信しないことの明示） */
+/* ===== 計測・タスク一覧の本体 ===== */
+.fp-page {
   display: flex;
-  align-items: end;
-  justify-content: space-between;
-  gap: 18px;
-}
-
-.measure-kicker {
-  margin: 0 0 6px;
-  color: var(--color-ink-3);
-  font-family: var(--font-mono);
-  font-size: var(--text-caption);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  flex-direction: column;
+  gap: 20px;
 }
 
 .measure-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.45fr) minmax(280px, 0.75fr);
+  grid-template-columns: minmax(300px, 400px) minmax(0, 1fr);
   gap: 20px;
   align-items: stretch;
 }
 
 .measure-camera {
-  padding: 16px;
+  padding: 20px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.measure-camera__title,
+.measure-score__title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--color-ink);
 }
 
 .measure-canvas-wrap {
   position: relative;
   overflow: hidden;
   border-radius: var(--radius-control);
-  background: var(--color-surface-sunken);
+  background: var(--color-camera-bg);
   aspect-ratio: 4 / 3;
-  border: 1px solid var(--color-border);
 }
 
 .measure-canvas {
@@ -815,9 +1071,9 @@ button, select, textarea, input { font-family: inherit; }
   place-content: center;
   justify-items: center;
   gap: 10px;
-  color: var(--color-ink-3);
+  color: var(--color-camera-ink);
   font-size: var(--text-body);
-  background: var(--color-surface-sunken);
+  background: var(--color-camera-bg);
 }
 
 .measure-camera__empty[hidden] {
@@ -833,21 +1089,33 @@ button, select, textarea, input { font-family: inherit; }
 }
 
 .measure-camera-control {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  align-items: center;
-  gap: 10px;
-  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .measure-camera-control__label {
-  color: var(--text-muted);
-  font-size: 13px;
-  font-weight: 600;
+  color: var(--color-ink-2);
+  font-size: 12px;
+  font-weight: 500;
 }
 
+/* カメラ・施策の select は .input を上書きして新デザインのコンパクトな行に揃える */
 .measure-camera-control__select {
+  flex: none;
   width: 100%;
+  appearance: none;
+  -webkit-appearance: none;
+  padding: 8px 28px 8px 10px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-s, 6px);
+  background-color: var(--color-surface);
+  color: var(--color-ink);
+  font-size: 13px;
+  /* 右端のドロップダウン矢印（インライン SVG。CSP のため data URI で埋め込む） */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%2377828A' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 11px center;
 }
 
 .measure-camera-control__select:disabled {
@@ -859,7 +1127,7 @@ button, select, textarea, input { font-family: inherit; }
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
-  margin-top: 16px;
+  margin-top: auto;
 }
 
 /* 主アクションは横幅いっぱいに広げてカメラパネル下で目立たせる */
@@ -873,109 +1141,241 @@ button, select, textarea, input { font-family: inherit; }
 }
 
 .measure-score {
-  padding: 24px;
+  padding: 20px 22px;
   display: flex;
   flex-direction: column;
+  gap: 16px;
   min-height: 100%;
 }
 
-.measure-score__label {
-  color: var(--text-muted);
-  font-size: 13px;
-  margin-bottom: 8px;
+/* 上段: 左に大スコア＋状態、右に統計グリッド */
+.measure-score__top {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px 28px;
+  align-items: flex-start;
+  padding: 6px 0;
+}
+
+.measure-score__headline {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  /* 大スコア基準の幅に固定し、残りの幅を統計（3列）へ回す（デザイン準拠） */
+  flex: 0 0 auto;
+  width: 200px;
+}
+
+.measure-score__value-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
 }
 
 .measure-score__value {
-  color: var(--text-strong);
+  /* 既定は待機・離席色。計測が始まると data-state で濃くなる（下の指定を参照） */
+  color: var(--color-ink-3);
   font-family: var(--font-mono);
   font-size: clamp(54px, 9vw, 96px);
-  line-height: 0.98;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
+}
+
+.measure-score__value-max {
+  color: var(--color-ink-3);
+  font-size: 16px;
 }
 
 .measure-state {
   display: inline-flex;
-  align-self: flex-start;
-  margin-top: 14px;
+  align-items: center;
+  gap: 7px;
+  width: fit-content;
   border-radius: var(--radius-pill);
-  border: 1px solid var(--surface-line);
-  padding: 6px 14px;
-  color: var(--text-muted);
-  font-weight: 600;
+  padding: 4px 12px;
+  color: var(--color-ink-2);
+  background: var(--color-surface-sunken);
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+/* 状態チップ左のドット（currentColor 追従） */
+.measure-state::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
 }
 
 .measure-state[data-state="high"] {
-  color: var(--color-accent);
-  border-color: var(--color-accent);
-  background: var(--color-accent-soft);
+  color: var(--color-state-done);
+  background: var(--color-state-done-bg);
 }
 
 .measure-state[data-state="medium"] {
-  color: var(--color-ink-2);
-  border-color: var(--color-border-strong);
+  color: var(--color-state-active);
+  background: var(--color-state-active-bg);
 }
 
-.measure-state[data-state="low"],
-.measure-state[data-state="away"] {
+.measure-state[data-state="low"] {
   color: var(--color-state-paused);
-  border-color: var(--color-state-paused);
   background: var(--color-state-paused-bg);
 }
 
-.measure-message {
-  margin-top: 18px;
-  color: var(--color-ink-3);
-  font-size: var(--text-body);
+.measure-state[data-state="away"],
+.measure-state[data-state="interrupted"] {
+  color: var(--color-state-archived);
+  background: var(--color-state-archived-bg);
 }
 
+/* 計測開始前の待機状態（JS が data-state を付ける前の初期表示） */
+.measure-state--idle {
+  color: var(--color-state-todo);
+  background: var(--color-state-todo-bg);
+}
+
+/* スコアの色は計測状態で変える（新デザインの scoreColor ロジックに準拠）
+   ・待機（data-state 未設定）/ 離席 → 薄いグレー
+   ・LOW → 注意色
+   ・HIGH / MEDIUM → 主要テキスト色で強調 */
+.measure-score__value[data-state="high"],
+.measure-score__value[data-state="medium"] {
+  color: var(--color-ink);
+}
+
+.measure-score__value[data-state="low"] {
+  color: var(--color-state-paused);
+}
+
+.measure-message {
+  color: var(--color-ink-2);
+  font-size: 12.5px;
+}
+
+.measure-stats {
+  flex: 1;
+  min-width: 300px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  border-left: 1px solid var(--color-border);
+  padding-left: 28px;
+}
+
+.measure-stats__group--today {
+  border-top: 1px solid var(--color-border);
+  padding-top: 14px;
+}
+
+.measure-stats__label {
+  margin: 0 0 8px;
+  color: var(--color-ink-3);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.measure-stats__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(104px, 1fr));
+  gap: 12px 20px;
+}
+
+.measure-stats__item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.measure-stats__key {
+  color: var(--color-ink-2);
+  font-size: 12px;
+}
+
+.measure-stats__num {
+  color: var(--color-ink);
+  font-family: var(--font-mono);
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.measure-stats__num--muted {
+  color: var(--color-ink-2);
+}
+
+.measure-stats__unit {
+  color: var(--color-ink-3);
+  font-size: 13px;
+  font-weight: 400;
+}
+
+/* 下段: 幅広スコア推移チャート */
 .measure-pulse {
-  margin-top: 22px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-control);
-  background: var(--color-surface-sunken);
-  overflow: hidden;
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .measure-pulse__head {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 10px 12px 8px;
-  color: var(--text-muted);
+  align-items: baseline;
+  gap: 10px;
+  color: var(--color-ink-2);
   font-size: 12px;
-  font-weight: 600;
-  border-bottom: 1px solid var(--surface-line);
 }
 
 .measure-pulse__head strong {
-  color: var(--accent);
-  font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: 0.08em;
+  color: var(--color-ink-3);
+  font-weight: 400;
+}
+
+/* チャート本体＋軸ラベルの重ね合わせ領域 */
+.measure-pulse__plot {
+  position: relative;
 }
 
 .measure-pulse__canvas {
   display: block;
   width: 100%;
-  height: 96px;
+  height: 140px;
 }
 
-.measure-breakdown {
-  margin-top: auto;
-  padding-top: 24px;
-  display: grid;
-  gap: 10px;
+/* Y軸ラベル（右端 100 / 50 / 0） */
+.measure-pulse__y {
+  position: absolute;
+  right: 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-ink-3);
+  pointer-events: none;
 }
 
-.measure-breakdown__item {
+.measure-pulse__y--top { top: -2px; }
+.measure-pulse__y--mid { top: 50%; transform: translateY(-50%); }
+.measure-pulse__y--bottom { bottom: -2px; }
+
+/* X軸ラベル（-30分 … 現在） */
+.measure-pulse__x {
   display: flex;
   justify-content: space-between;
-  gap: 16px;
-  border-top: 1px solid var(--surface-line);
-  padding-top: 10px;
-  color: var(--text-muted);
-  font-size: 13px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-ink-3);
+}
+
+/* カメラ見出しに添える計測対象タスク名 */
+.measure-camera__task {
+  margin-left: 8px;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--color-ink-3);
 }
 
 .measure-breakdown__item strong {

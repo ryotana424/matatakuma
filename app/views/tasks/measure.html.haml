@@ -1,24 +1,22 @@
 - content_for(:title) { "#{@task.name} | Focus Pulse" }
+- content_for(:header) { render "page_header", current: :measure }
 
 -# 日次ステータスバーのライブ更新用ベース値（保存済み完了セッションの集計）
 - daily_summary = SessionAnalytics.summary(@daily_sessions)
 - daily_volume = SessionAnalytics.focus_volume(@daily_sessions) || 0
 
-.measure-page{ data: { controller: "measure",
-                       measure_task_id_value: @task.id,
-                       measure_create_url_value: task_sessions_path(@task),
-                       measure_daily_base_duration_sec_value: daily_summary[:total_duration_sec],
-                       measure_daily_base_volume_value: daily_volume,
-                       measure_daily_base_score_sum_value: @daily_sessions.sum(&:avg_score),
-                       measure_daily_base_session_count_value: @daily_sessions.size } }
-  .page-head.measure-head
-    %div
-      %p.measure-kicker MEASUREMENT
-      %h1.page-title= @task.name
-    = link_to "タスク一覧へ戻る", tasks_path, class: "btn btn--ghost"
-
+.fp-page{ data: { controller: "measure",
+                  measure_task_id_value: @task.id,
+                  measure_create_url_value: task_sessions_path(@task),
+                  measure_daily_base_duration_sec_value: daily_summary[:total_duration_sec],
+                  measure_daily_base_volume_value: daily_volume,
+                  measure_daily_base_score_sum_value: @daily_sessions.sum(&:avg_score),
+                  measure_daily_base_session_count_value: @daily_sessions.size } }
   .measure-grid
     %section.panel.measure-camera{ "aria-label": "カメラ計測" }
+      %h2.measure-camera__title
+        カメラ
+        %span.measure-camera__task= @task.name
       .measure-canvas-wrap
         %video{ data: { measure_target: "video" }, autoplay: true, playsinline: true, muted: true, style: "display:none" }
         %canvas.measure-canvas{ data: { measure_target: "canvas" }, width: "640", height: "480" }
@@ -26,7 +24,7 @@
           %span.measure-camera__dot
           %span カメラ待機中
       .measure-camera-control
-        %label.measure-camera-control__label{ for: "measure-camera-select" } カメラ
+        %label.measure-camera-control__label{ for: "measure-camera-select" } カメラデバイス
         %select#measure-camera-select.input.measure-camera-control__select{ disabled: true, data: { measure_target: "cameraSelect", action: "measure#changeCamera" } }
           %option カメラを確認中
       .measure-camera-control
@@ -38,29 +36,62 @@
           %span 計測終了して保存
 
     %aside.panel.measure-score{ "aria-label": "集中度スコア" }
-      .measure-score__label 現在の集中度
-      .measure-score__value{ data: { measure_target: "score" } } --
-      .measure-state{ data: { measure_target: "state" } } --
-      .measure-message{ data: { measure_target: "message" } }
-        カメラ許可後、スコアは1秒ごとに更新されます。
+      %h2.measure-score__title 現在の集中度
+
+      .measure-score__top
+        .measure-score__headline
+          .measure-score__value-row
+            %span.measure-score__value{ data: { measure_target: "score" } } —
+            %span.measure-score__value-max / 100
+          .measure-state{ data: { measure_target: "state" }, class: "measure-state--idle" } 待機中
+          .measure-message{ data: { measure_target: "message" } }
+            カメラ許可後、スコアは1秒ごとに更新されます。
+
+        .measure-stats
+          .measure-stats__group
+            %p.measure-stats__label このセッション
+            .measure-stats__grid
+              .measure-stats__item
+                %span.measure-stats__key 平均スコア
+                %strong.measure-stats__num{ data: { measure_target: "sessionAverage" } } —
+              .measure-stats__item
+                %span.measure-stats__key 前回平均
+                %strong.measure-stats__num.measure-stats__num--muted= @previous_session&.avg_score || "—"
+              .measure-stats__item
+                %span.measure-stats__key 瞬き回数
+                %strong.measure-stats__num
+                  %span{ data: { measure_target: "blinkCount" } } 0
+                  %span.measure-stats__unit 回
+          .measure-stats__group.measure-stats__group--today
+            %p.measure-stats__label 本日
+            .measure-stats__grid
+              .measure-stats__item
+                %span.measure-stats__key 作業時間
+                %strong.measure-stats__num{ data: { measure_target: "dailyDuration" } }= format_duration(daily_summary[:total_duration_sec])
+              .measure-stats__item
+                %span.measure-stats__key 集中度総量
+                %strong.measure-stats__num{ data: { measure_target: "dailyFocusVolume" } }= daily_volume.positive? ? format_focus_volume(daily_volume) : "—"
+              .measure-stats__item
+                %span.measure-stats__key 平均スコア
+                %strong.measure-stats__num
+                  %span{ data: { measure_target: "dailyAverage" } }= daily_summary[:avg_score] || "—"
+                  %span.measure-stats__unit / 100
 
       .measure-pulse{ "aria-label": "スコア推移" }
         .measure-pulse__head
           %span スコア推移
-          %strong 30MIN
-        %canvas.measure-pulse__canvas{ data: { measure_target: "pulseCanvas" }, width: "360", height: "96" }
-
-      .measure-breakdown
-        .measure-breakdown__item
-          %span このセッション平均
-          %strong{ data: { measure_target: "sessionAverage" } } --
-        .measure-breakdown__item
-          %span 前回セッション平均
-          %strong= @previous_session&.avg_score || "--"
-        .measure-breakdown__item
-          %span 瞬き回数
-          %strong{ data: { measure_target: "blinkCount" } } 0
-
-  = render "status_bar", daily_sessions: @daily_sessions
+          %strong 直近30分
+        .measure-pulse__plot
+          %canvas.measure-pulse__canvas{ data: { measure_target: "pulseCanvas" }, width: "600", height: "140" }
+          %span.measure-pulse__y.measure-pulse__y--top 100
+          %span.measure-pulse__y.measure-pulse__y--mid 50
+          %span.measure-pulse__y.measure-pulse__y--bottom 0
+        .measure-pulse__x
+          %span -30分
+          %span -20分
+          %span -10分
+          %span 現在
 
   = render "task_list", tasks: @tasks, form_task: @new_task, current_task: @task
+
+  = render "privacy_footer"

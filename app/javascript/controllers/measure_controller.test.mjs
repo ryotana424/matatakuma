@@ -18,7 +18,7 @@ assert.equal(source.includes("drawScoreTrend("), true, "スコア推移を折れ
 assert.equal(source.includes("const y = scoreToY(score)"), true, "スコア値をそのまま折れ線の高さへ変換する")
 assert.equal(source.includes("const beat"), false, "心電図風の拍動補正を使わない")
 assert.equal(source.includes("isFaceTemporarilyAbsent(this.frameBuffer)"), true, "一時的な顔ロスト中はスコア保存を待つ")
-assert.equal(source.includes("this.scoreTarget.textContent = \"--\""), true, "一時的な顔ロスト中はスコアを表示しない")
+assert.equal(source.includes("this.scoreTarget.textContent = \"—\""), true, "一時的な顔ロスト中はスコアを表示しない")
 assert.equal(source.includes("this.stateTarget.dataset.state = \"interrupted\""), true, "一時的な顔ロスト中の表示状態を持つ")
 assert.equal(source.includes("\"sessionAverage\""), true, "このセッションの平均スコア表示targetを持つ")
 assert.equal(source.includes("updateSessionAverage()"), true, "サンプル追加時にこのセッション平均を更新する")
