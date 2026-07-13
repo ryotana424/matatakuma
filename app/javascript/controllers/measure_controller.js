@@ -2,7 +2,8 @@ import { Controller } from "@hotwired/stimulus"
 import { LM, calcEAR, calcGazeOnScreen, calcHeadStable } from "focus/landmarks"
 import { computeMetrics, calcScore, classifyState, EAR_CLOSED_THRESH, isFaceTemporarilyAbsent } from "focus/score"
 import { aggregateSession, averageFocusableScore, focusVolume } from "focus/aggregate"
-import { faceAbsenceDeadlineMs } from "focus/absence_timeout"
+import { faceAbsenceDeadlineMs, faceReturnState } from "focus/absence_timeout"
+import { SerialQueue } from "focus/serial_queue"
 
 const WINDOW_MS = 30000
 // スコア推移グラフは「直近30分」を実時間で描く。各サンプルは記録時刻(t)を持つ。
@@ -34,9 +35,15 @@ export default class extends Controller {
     this.eyeClosed = false
     this.running = false
     this.stopping = false
+    this.waitingForReturn = false
+    this.restarting = false
+    this.restartFailed = false
     this.sessionId = null
     this.faceAbsentSinceMs = null
+    this.faceDetectedSinceMs = null
+    this.lastReturnFrameAtMs = null
     this.autosaveTick = null
+    this.saveQueue = new SerialQueue()
     this.debugMode = this.isDebugModeEnabled()
     this.debugRows = {}
     this.selectedDeviceId = this.readCookie(CAMERA_DEVICE_COOKIE)
@@ -72,20 +79,8 @@ export default class extends Controller {
       await this.populateCameraOptions()
 
       this.running = true
-      this.startedAt = new Date()
-      this.faceAbsentSinceMs = null
-      await this.createSession()
-      this.frameBuffer = []
-      this.samples = []
-      this.blinkCount = 0
-      this.eyeClosed = false
-      this.updateBlinkCount()
-      this.updateSessionAverage()
-      this.stopBtnTarget.disabled = false
-      this.placeholderTarget.hidden = true
-      this.messageTarget.textContent = "計測中です。映像は端末内でのみ解析されます。"
+      await this.beginSession()
       this.tick = setInterval(() => this.sampleOnce(), 1000)
-      this.autosaveTick = setInterval(() => this.saveProgress(), 15000)
     } catch (error) {
       this.messageTarget.textContent = `カメラを開始できません: ${error.message}`
       this.shutdown()
@@ -155,7 +150,9 @@ export default class extends Controller {
       await this.startVideoStream(deviceId)
       await this.populateCameraOptions()
       this.writeCookie(CAMERA_DEVICE_COOKIE, this.selectedDeviceId, CAMERA_DEVICE_COOKIE_MAX_AGE)
-      this.messageTarget.textContent = "計測中です。映像は端末内でのみ解析されます。"
+      this.messageTarget.textContent = this.waitingForReturn
+        ? "離席によりセッションを区切りました。復帰すると自動で計測を再開します。"
+        : "計測中です。映像は端末内でのみ解析されます。"
     } catch (error) {
       this.messageTarget.textContent = `カメラを切り替えられません: ${error.message}`
       await this.populateCameraOptions()
@@ -181,15 +178,27 @@ export default class extends Controller {
         earRight,
         avgEar,
       }
-      this.detectBlink(avgEar)
+      if (!this.waitingForReturn && !this.restarting && !this.stopping) this.detectBlink(avgEar)
       this.drawLandmarks(lms)
     }
 
     const now = Date.now()
-    if (faceDetected) {
-      this.faceAbsentSinceMs = null
-    } else if (!Number.isFinite(this.faceAbsentSinceMs)) {
-      this.faceAbsentSinceMs = now
+    if (this.waitingForReturn && !this.restarting && !this.restartFailed && !this.stopping) {
+      const returnState = faceReturnState({
+        faceDetected,
+        faceDetectedSinceMs: this.faceDetectedSinceMs,
+        lastFrameAtMs: this.lastReturnFrameAtMs,
+        nowMs: now,
+      })
+      this.faceDetectedSinceMs = returnState.faceDetectedSinceMs
+      this.lastReturnFrameAtMs = now
+      if (returnState.confirmed) void this.restartAfterAbsence()
+    } else if (!this.waitingForReturn) {
+      if (faceDetected) {
+        this.faceAbsentSinceMs = null
+      } else if (!Number.isFinite(this.faceAbsentSinceMs)) {
+        this.faceAbsentSinceMs = now
+      }
     }
     this.frameBuffer.push({ ts: now, ...frame })
     const cutoff = now - WINDOW_MS
@@ -197,6 +206,7 @@ export default class extends Controller {
   }
 
   sampleOnce() {
+    if (this.waitingForReturn || this.restarting || this.stopping) return
     if (this.endIfFaceAbsentTooLong()) return
 
     this.updateDailyStatus()
@@ -239,7 +249,7 @@ export default class extends Controller {
   }
 
   endIfFaceAbsentTooLong(nowMs = Date.now()) {
-    if (!this.startedAt || this.stopping) return false
+    if (!this.startedAt || this.stopping || this.waitingForReturn) return false
 
     const latestFrame = this.frameBuffer[this.frameBuffer.length - 1]
     const deadlineMs = faceAbsenceDeadlineMs({
@@ -422,6 +432,57 @@ export default class extends Controller {
     this.sessionId = body.id
   }
 
+  resetSessionMeasurements(startedAt = new Date()) {
+    this.startedAt = startedAt
+    this.sessionId = null
+    this.frameBuffer = []
+    this.samples = []
+    this.scoreHistory = []
+    this.blinkCount = 0
+    this.eyeClosed = false
+    this.faceAbsentSinceMs = null
+    this.faceDetectedSinceMs = null
+    this.lastReturnFrameAtMs = null
+    this.updateBlinkCount()
+    this.updateSessionAverage()
+    this.scoreTarget.textContent = "—"
+    delete this.scoreTarget.dataset.state
+    this.stateTarget.textContent = "待機中"
+    delete this.stateTarget.dataset.state
+    this.drawScoreTrend()
+  }
+
+  async beginSession() {
+    this.resetSessionMeasurements()
+    await this.createSession()
+    this.waitingForReturn = false
+    this.restarting = false
+    this.restartFailed = false
+    this.stopping = false
+    this.stopBtnTarget.disabled = false
+    this.placeholderTarget.hidden = true
+    this.messageTarget.textContent = "計測中です。映像は端末内でのみ解析されます。"
+    this.autosaveTick = setInterval(() => this.saveProgress(), 15000)
+  }
+
+  async restartAfterAbsence() {
+    if (!this.waitingForReturn || this.restarting || this.stopping) return
+
+    this.restarting = true
+    this.messageTarget.textContent = "復帰を検出しました。新しいセッションを開始しています..."
+
+    try {
+      await this.beginSession()
+    } catch (error) {
+      this.startedAt = null
+      this.sessionId = null
+      this.restarting = false
+      this.restartFailed = true
+      this.faceDetectedSinceMs = null
+      this.messageTarget.textContent = `セッションを自動再開できません: ${error.message}。ページを再読み込みしてください。`
+    }
+  }
+
   // 計測画面で選択中の施策ID。未選択（空文字）はnullを送り、セッションの紐付けを外す
   selectedInterventionId() {
     if (!this.hasInterventionSelectTarget) return null
@@ -429,11 +490,12 @@ export default class extends Controller {
     return value === "" ? null : Number(value)
   }
 
-  async saveProgress({ completed = false, interrupted = false, endedAt = null } = {}) {
-    if (!this.sessionId || !this.startedAt) return true
+  saveProgress({ completed = false, interrupted = false, endedAt = null } = {}) {
+    if (!this.sessionId || !this.startedAt) return Promise.resolve(true)
 
     const now = endedAt || new Date()
     const payload = aggregateSession(this.samples, this.startedAt, now)
+    const updateUrl = `${this.createUrlValue}/${this.sessionId}`
     payload.intervention_id = this.selectedInterventionId()
     if (completed) {
       payload.status = "completed"
@@ -445,17 +507,26 @@ export default class extends Controller {
       payload.ended_at = now.toISOString()
     }
 
-    const response = await fetch(`${this.createUrlValue}/${this.sessionId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ session: payload }),
-    })
+    return this.saveQueue.enqueue(async () => {
+      const response = await fetch(updateUrl, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ session: payload }),
+      })
 
-    return response.ok
+      return response.ok
+    })
   }
 
   async stop() {
-    if (!this.startedAt || this.stopping) return
+    if (this.stopping || this.restarting) return
+
+    if (!this.startedAt) {
+      this.stopping = true
+      this.shutdown()
+      window.location.href = "/tasks"
+      return
+    }
 
     this.stopping = true
     this.shutdown()
@@ -475,14 +546,32 @@ export default class extends Controller {
     if (!this.startedAt || this.stopping) return
 
     this.stopping = true
-    this.shutdown()
+    this.waitingForReturn = true
+    if (this.autosaveTick) clearInterval(this.autosaveTick)
+    this.autosaveTick = null
     this.messageTarget.textContent = "離席が30分続いたため、セッションを終了しています..."
 
-    const saved = await this.saveProgress({ interrupted: true, endedAt })
+    let saved = false
+    try {
+      saved = await this.saveProgress({ interrupted: true, endedAt })
+    } catch {
+      saved = false
+    }
     if (saved) {
-      window.location.href = "/tasks"
-    } else {
+      this.sessionId = null
+      this.startedAt = null
       this.stopping = false
+      this.restartFailed = false
+      this.faceDetectedSinceMs = null
+      this.lastReturnFrameAtMs = null
+      this.scoreTarget.textContent = "—"
+      delete this.scoreTarget.dataset.state
+      this.stateTarget.textContent = "復帰待ち"
+      delete this.stateTarget.dataset.state
+      this.messageTarget.textContent = "離席によりセッションを区切りました。復帰すると自動で計測を再開します。"
+    } else {
+      this.waitingForReturn = false
+      this.shutdown()
       this.messageTarget.textContent = "セッションの自動終了に失敗しました。ページを再読み込みしてください。"
     }
   }

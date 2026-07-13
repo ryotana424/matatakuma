@@ -28,6 +28,12 @@ assert.equal(source.includes("CAMERA_DEVICE_COOKIE"), true, "前回選択した�
 assert.equal(source.includes("readCookie(CAMERA_DEVICE_COOKIE)"), true, "起動時に前回のカメラIDをCookieから読む")
 assert.equal(source.includes("writeCookie(CAMERA_DEVICE_COOKIE, this.selectedDeviceId"), true, "起動・切替後に選択したカメラIDをCookieへ保存する")
 assert.equal(source.includes("SameSite=Lax"), true, "CookieはSameSite=Laxで保存する")
+
+const changeCameraSource = source.slice(
+  source.indexOf("async changeCamera("),
+  source.indexOf("\n  onResults("),
+)
+assert.equal(changeCameraSource.includes("this.waitingForReturn"), true, "復帰待ち中のカメラ切替後も復帰待ち表示を保つ")
 assert.equal(source.includes("isDebugModeEnabled()"), true, "URLパラメータでデバッグモードを判定する")
 assert.equal(source.includes("new URLSearchParams(window.location.search)"), true, "クエリ文字列からdebugパラメータを読む")
 assert.equal(source.includes("this.debugMode = this.isDebugModeEnabled()"), true, "接続時にデバッグモードを保持する")
@@ -56,6 +62,21 @@ assert.equal(source.includes("faceAbsenceDeadlineMs"), true, "顔の連続未検
 assert.equal(source.includes("void this.stopForAbsence(new Date(deadlineMs))"), true, "離席が30分続いた時点で自動終了する")
 assert.equal(source.includes("this.faceAbsentSinceMs = null"), true, "顔を再検出したら連続離席時間をリセットする")
 assert.equal(source.includes("payload.status = \"interrupted\""), true, "離席による自動終了を中断セッションとして保存する")
+assert.equal(source.includes("this.waitingForReturn = true"), true, "離席終了後は画面を閉じず復帰待ちへ移る")
+assert.equal(source.includes("faceReturnState"), true, "顔の連続検出時間から復帰を判定する")
+assert.equal(source.includes("void this.restartAfterAbsence()"), true, "復帰確認後に新しいセッションを自動開始する")
+assert.equal(source.includes("this.restartFailed = true"), true, "自動再開の応答不明時に重複セッション作成を繰り返さない")
+assert.equal(source.includes("resetSessionMeasurements()"), true, "自動再開時にセッション単位の計測値をリセットする")
+assert.equal(source.includes("delete this.scoreTarget.dataset.state"), true, "自動再開時に前セッションのスコア表示状態を消す")
+assert.equal(source.includes("delete this.stateTarget.dataset.state"), true, "自動再開時に前セッションの状態表示を消す")
+
+const stopForAbsenceSource = source.slice(
+  source.indexOf("async stopForAbsence("),
+  source.indexOf("\n  shutdown()"),
+)
+assert.equal(stopForAbsenceSource.includes("window.location.href"), false, "離席終了後はタスク一覧へ移動しない")
+assert.equal(stopForAbsenceSource.includes("this.stopVideoStream()"), false, "離席終了後も復帰検出用のカメラを止めない")
+assert.equal(stopForAbsenceSource.includes("catch"), true, "離席終了の通信エラー時も失敗状態へ移れる")
 
 assert.equal(source.includes("payload.intervention_id = this.selectedInterventionId()"), true, "定期保存と終了保存で選択中の施策IDを送る")
 assert.equal(source.includes("return value === \"\" ? null : Number(value)"), true, "施策未選択はnullとして送り紐付けを外せる")
