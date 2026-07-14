@@ -2229,3 +2229,65 @@ button, select, textarea, input { font-family: inherit; }
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; }
 }
+
+/* 計測画面ミニモード: 小さいウィンドウでは現在の集中度だけを表示する */
+@media (max-width: 520px) {
+  .app-shell:has(.fp-page[data-controller~="measure"]) {
+    box-sizing: border-box;
+    min-height: 100dvh;
+    padding: 12px;
+    display: grid;
+    place-items: center;
+  }
+
+  .app-shell:has(.fp-page[data-controller~="measure"]) > .fp-header,
+  .app-shell:has(.fp-page[data-controller~="measure"]) > .fp-footer,
+  .app-shell:has(.fp-page[data-controller~="measure"]) > .flash,
+  .fp-page[data-controller~="measure"] .measure-camera,
+  .fp-page[data-controller~="measure"] > .task-panel,
+  .fp-page[data-controller~="measure"] .measure-message,
+  .fp-page[data-controller~="measure"] .measure-stats,
+  .fp-page[data-controller~="measure"] .measure-pulse,
+  .fp-page[data-controller~="measure"] .measure-debug {
+    display: none;
+  }
+
+  .fp-page[data-controller~="measure"] {
+    width: 100%;
+    gap: 0;
+  }
+
+  .fp-page[data-controller~="measure"] .measure-grid {
+    display: block;
+  }
+
+  .fp-page[data-controller~="measure"] .measure-score {
+    width: 100%;
+    padding: 24px 16px;
+    gap: 12px;
+    align-items: center;
+  }
+
+  .fp-page[data-controller~="measure"] .measure-score__title {
+    text-align: center;
+  }
+
+  .fp-page[data-controller~="measure"] .measure-score__top {
+    display: block;
+    padding: 0;
+  }
+
+  .fp-page[data-controller~="measure"] .measure-score__headline {
+    width: auto;
+    gap: 12px;
+    align-items: center;
+  }
+
+  .fp-page[data-controller~="measure"] .measure-score__value-row {
+    justify-content: center;
+  }
+
+  .fp-page[data-controller~="measure"] .measure-score__value {
+    font-size: clamp(64px, 28vw, 96px);
+  }
+}
