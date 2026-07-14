@@ -1,23 +1,33 @@
 - content_for(:title) { "日次レポート | Focus Pulse" }
+- content_for(:header) { render "tasks/page_header", current: :reports }
 
 = turbo_frame_tag "modal" do
-  .page-head
-    %h1.page-title 日次レポート
-    %p.page-lead
-      計測した日ごとの集中傾向を確認し、次の作業に向けた施策を残します。
+  .report-index{ style: "display:flex;flex-direction:column;gap:var(--space-5)" }
+    .page-head
+      %h1.ds-page-title 日次レポート
+      %p.page-lead
+        計測した日ごとの集中傾向を確認し、次の作業に向けた施策を残します。
 
-  - if @dates.any?
-    .report-list
-      - @dates.each do |date|
-        = link_to report_path(date: date.iso8601), class: "panel report-date-card" do
-          %span.report-date-card__date= date.iso8601
-          %span.report-date-card__label レポートを見る
-  - else
-    .panel.empty-state
-      %p.empty-state__title まだレポートはありません
-      %p 計測を保存すると日次レポートが作成されます。
-
-  %footer.page-foot
-    -# モーダル外（フルページ）への遷移はフレームを抜ける
-    = link_to "タスク一覧へ", tasks_path, class: "btn btn--ghost", data: { turbo_frame: "_top" }
-    = link_to "施策一覧へ", interventions_path, class: "btn btn--ghost"
+    - if @months.any?
+      .report-months
+        - @months.each do |month|
+          %section.report-month{ "aria-label": month[:label] }
+            %h2.report-month__label= month[:label]
+            .report-month__list
+              - month[:days].each do |day|
+                = link_to report_path(date: day[:date].iso8601), class: "report-day", data: { turbo_frame: "modal" } do
+                  %span.report-day__date= "#{day[:date].month}/#{day[:date].day}"
+                  %span.report-day__weekday= %w[日 月 火 水 木 金 土][day[:date].wday] + "曜日"
+                  - if day[:date] == Date.current
+                    %span.report-day__today 今日
+                  %span.report-day__meta
+                    %span.report-day__time= format_duration(day[:total_duration_sec])
+                    %span.report-day__score
+                      %span.report-day__bar
+                        %span{ style: "width:#{day[:avg_score] || 0}%" }
+                      %span.report-day__num= day[:avg_score] || "--"
+                    %span.report-day__arrow{ "aria-hidden": "true" } →
+    - else
+      .ds-panel.empty-state
+        %p.empty-state__title まだレポートはありません
+        %p 計測を保存すると日次レポートが作成されます。

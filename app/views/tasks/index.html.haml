@@ -1,5 +1,5 @@
 - content_for(:title) { "Focus Pulse" }
-- content_for(:header) { render "page_header", current: :tasks }
+- content_for(:header) { render "page_header", current: :measure }
 
 - daily_summary = SessionAnalytics.summary(@daily_sessions)
 - daily_volume = SessionAnalytics.focus_volume(@daily_sessions) || 0
@@ -18,5 +18,3 @@
   = render "status_bar", daily_sessions: @daily_sessions
 
   = render "task_list", tasks: @tasks, form_task: @task, current_task: nil
-
-  = render "privacy_footer"

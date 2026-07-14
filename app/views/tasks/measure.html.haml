@@ -55,7 +55,7 @@
                 %span.measure-stats__key 平均スコア
                 %strong.measure-stats__num{ data: { measure_target: "sessionAverage" } } —
               .measure-stats__item
-                %span.measure-stats__key 前回平均
+                %span.measure-stats__key 前回平均スコア
                 %strong.measure-stats__num.measure-stats__num--muted= @previous_session&.avg_score || "—"
               .measure-stats__item
                 %span.measure-stats__key 瞬き回数
@@ -93,5 +93,3 @@
           %span 現在
 
   = render "task_list", tasks: @tasks, form_task: @new_task, current_task: @task
-
-  = render "privacy_footer"

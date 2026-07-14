@@ -251,20 +251,27 @@ button, select, textarea, input { font-family: inherit; }
   color: var(--color-ink);
 }
 
-.fp-crumbs {
+/* グローバルナビ（フラット・現在地ハイライト） */
+.fp-nav {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 18px;
   font-size: 13px;
-  color: var(--color-ink-3);
 }
 
-.fp-crumbs__here {
-  color: var(--color-ink);
-}
-
-.fp-crumbs__link {
+.fp-nav__link {
   color: var(--color-ink-2);
+  text-decoration: none;
+}
+
+.fp-nav__link:hover {
+  color: var(--color-accent);
+  text-decoration: none;
+}
+
+.fp-nav__here {
+  color: var(--color-ink);
+  font-weight: 600;
 }
 
 /* ===== デザイン準拠フッター（プライバシー注記＋テーマ切替） ===== */
@@ -303,69 +310,6 @@ button, select, textarea, input { font-family: inherit; }
 .fp-footer__theme-label {
   font-size: 12px;
   color: var(--color-ink-3);
-}
-
-/* グローバルヘッダー（全画面共通） */
-.app-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 36px;
-}
-
-.app-brand {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.app-brand__mark {
-  width: 34px;
-  height: 34px;
-  border-radius: var(--radius-s);
-  background: var(--color-accent);
-  display: grid;
-  place-items: center;
-  color: var(--color-accent-ink);
-  flex-shrink: 0;
-}
-
-.app-brand__name {
-  font-weight: 600;
-  letter-spacing: 0.01em;
-  color: var(--text-strong);
-}
-
-.app-brand__sub {
-  display: block;
-  font-size: 12px;
-  color: var(--text-muted);
-  line-height: 1.3;
-}
-
-.app-nav {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-}
-
-.app-nav-link {
-  font-size: 14px;
-  color: var(--text-muted);
-  padding: 8px 14px;
-  border-radius: var(--radius-control);
-  border: 1px solid var(--surface-line);
-  transition: color var(--dur) var(--ease-out),
-              border-color var(--dur) var(--ease-out),
-              background var(--dur) var(--ease-out);
-}
-.app-nav-link:hover {
-  color: var(--text-strong);
-  border-color: var(--accent);
-  background: var(--accent-soft);
 }
 
 /* ===== 通知（flash） ===== */
@@ -1145,7 +1089,7 @@ button, select, textarea, input { font-family: inherit; }
   display: flex;
   flex-direction: column;
   gap: 16px;
-  min-height: 100%;
+  min-height: 0;
 }
 
 /* 上段: 左に大スコア＋状態、右に統計グリッド */
@@ -1317,10 +1261,13 @@ button, select, textarea, input { font-family: inherit; }
 
 /* 下段: 幅広スコア推移チャート */
 .measure-pulse {
-  margin-top: auto;
+  margin-top: 8px;
   display: flex;
   flex-direction: column;
   gap: 8px;
+  /* 右パネルの残り高さを埋めてチャートを縦に広げる */
+  flex: 1;
+  min-height: 140px;
 }
 
 .measure-pulse__head {
@@ -1339,12 +1286,18 @@ button, select, textarea, input { font-family: inherit; }
 /* チャート本体＋軸ラベルの重ね合わせ領域 */
 .measure-pulse__plot {
   position: relative;
+  /* head と x軸ラベルを除いた残りを埋める */
+  flex: 1;
+  min-height: 120px;
 }
 
 .measure-pulse__canvas {
   display: block;
+  /* plot 全体を埋める。絶対配置で親の高さにフィードバックしないようにする */
+  position: absolute;
+  inset: 0;
   width: 100%;
-  height: 140px;
+  height: 100%;
 }
 
 /* Y軸ラベル（右端 100 / 50 / 0） */
@@ -1557,7 +1510,15 @@ button, select, textarea, input { font-family: inherit; }
     grid-template-columns: 1fr;
   }
 
-  .measure-pulse__canvas {
+  /* 単一カラムでは高さを合わせる必要がないので固定高に戻す */
+  .measure-pulse {
+    flex: none;
+    min-height: 0;
+  }
+
+  .measure-pulse__plot {
+    flex: none;
+    min-height: 0;
     height: 84px;
   }
 
@@ -1995,6 +1956,274 @@ button, select, textarea, input { font-family: inherit; }
   font-family: var(--font-sans);
   width: 100%;
 }
+
+/* ds-input: About/施策の単一行入力（ds-textarea と同じ質感） */
+.ds-input {
+  padding: 9px 12px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-s);
+  background: var(--color-surface-sunken);
+  color: var(--color-ink);
+  font-size: 13.5px;
+  font-family: var(--font-sans);
+  width: 100%;
+}
+.ds-input::placeholder { color: var(--color-ink-3); }
+
+/* About のプライバシー方針見出しに使う小さなドット */
+.privacy-dot {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-state-done);
+}
+
+/* =========================================================
+   計測方法（About）: フロー番号・式・指標行
+   ========================================================= */
+.flow-steps { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; }
+.flow-step {
+  display: grid;
+  grid-template-columns: 28px 1fr;
+  gap: 14px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--color-border);
+}
+.flow-step:last-child { border-bottom: none; }
+.flow-step__num {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+  display: grid;
+  place-items: center;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+}
+.flow-step__body { display: flex; flex-direction: column; gap: 2px; }
+.flow-step__title { font-weight: 500; }
+.flow-step__desc { font-size: 13px; color: var(--color-ink-2); }
+
+.formula-box {
+  background: var(--color-surface-sunken);
+  border-radius: var(--radius-s);
+  padding: 14px 16px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.9;
+  color: var(--color-ink);
+  margin: 4px 0;
+}
+
+.metric-rows { display: flex; flex-direction: column; }
+.metric-row {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 16px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--color-border);
+  align-items: start;
+}
+.metric-row:last-child { border-bottom: none; }
+.metric-row__name { display: flex; align-items: baseline; gap: 8px; }
+.metric-row__label { font-weight: 500; font-size: 13.5px; }
+.metric-row__weight { font-family: var(--font-mono); font-size: 12.5px; color: var(--color-ink-2); }
+.metric-row__desc { font-size: 13px; color: var(--color-ink-2); }
+
+.privacy-list, .ref-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 13.5px;
+  color: var(--color-ink-2);
+}
+.privacy-list li { position: relative; padding-left: 24px; }
+.privacy-list li::before {
+  content: "✓";
+  position: absolute;
+  left: 0;
+  color: var(--color-state-done);
+}
+.ref-list li { padding-left: 24px; position: relative; }
+.ref-list li::before {
+  content: "";
+  position: absolute;
+  left: 6px;
+  top: 9px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--color-ink-3);
+}
+
+/* =========================================================
+   日次レポート一覧: 月グループ・日付行
+   ========================================================= */
+.report-months { display: flex; flex-direction: column; gap: 28px; }
+.report-month { display: flex; flex-direction: column; gap: 10px; }
+.report-month__label {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  color: var(--color-ink-3);
+}
+.report-month__list {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-m);
+  box-shadow: var(--shadow-panel);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.report-day {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  padding: 16px 22px;
+  color: var(--color-ink);
+  text-decoration: none;
+  border-bottom: 1px solid var(--color-border);
+  transition: background var(--dur) var(--ease-out);
+}
+.report-day:last-child { border-bottom: none; }
+.report-day:hover { background: var(--color-accent-soft); text-decoration: none; }
+.report-day__date {
+  font-family: var(--font-mono);
+  font-size: 17px;
+  font-weight: 600;
+  min-width: 5.5ch;
+}
+.report-day__weekday { font-size: 13px; color: var(--color-ink-3); min-width: 3.5em; }
+.report-day__today {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--color-accent);
+  background: var(--color-accent-soft);
+  border-radius: 999px;
+  padding: 2px 10px;
+}
+.report-day__meta { margin-left: auto; display: flex; align-items: baseline; gap: 20px; }
+.report-day__time { font-family: var(--font-mono); font-size: 13px; color: var(--color-ink-2); }
+.report-day__score { display: inline-flex; align-items: center; gap: 8px; }
+.report-day__bar {
+  width: 44px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--color-surface-sunken);
+  overflow: hidden;
+  display: inline-block;
+  align-self: center;
+}
+.report-day__bar > span { display: block; height: 100%; background: var(--color-chart-bar); }
+.report-day__num {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 500;
+  min-width: 2ch;
+  text-align: right;
+}
+.report-day__arrow { color: var(--color-ink-3); font-size: 13px; }
+
+/* =========================================================
+   施策: ベースライン・効果比較テーブル
+   ========================================================= */
+.baseline-panel {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-m);
+  box-shadow: var(--shadow-panel);
+  padding: 16px 22px;
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.baseline-panel__label { font-size: 12px; color: var(--color-ink-2); }
+.baseline-panel__value { font-family: var(--font-mono); font-size: 22px; font-weight: 600; }
+.baseline-panel__meta { font-size: 12px; color: var(--color-ink-3); }
+
+.compare-table { display: flex; flex-direction: column; }
+.compare-table__head,
+.compare-table__row {
+  display: grid;
+  grid-template-columns: 1.6fr 0.7fr 2fr 1.3fr;
+  gap: 12px;
+  align-items: center;
+}
+.compare-table__head {
+  padding: 8px 12px;
+  font-size: 12px;
+  color: var(--color-ink-2);
+  border-bottom: 1px solid var(--color-border);
+}
+.compare-table__row { padding: 13px 12px; border-bottom: 1px solid var(--color-border); }
+.compare-table__row:last-child { border-bottom: none; }
+.compare-table__cell--right { text-align: right; }
+.compare-table__cell--mono { font-family: var(--font-mono); }
+.compare-table__name { display: flex; flex-direction: column; min-width: 0; }
+.compare-table__title { font-weight: 500; }
+.compare-table__note { font-size: 12px; color: var(--color-ink-3); }
+.compare-table__bar-cell { display: flex; flex-direction: column; }
+.compare-table__bar {
+  position: relative;
+  height: 12px;
+  border-radius: 2px;
+  background: var(--color-surface-sunken);
+  display: block;
+}
+.compare-table__bar-fill {
+  position: absolute;
+  left: 0;
+  top: 2px;
+  bottom: 2px;
+  border-radius: 2px;
+  background: var(--color-chart-bar);
+  display: block;
+}
+.compare-table__baseline {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  width: 1.5px;
+  background: var(--color-ink-3);
+  display: block;
+}
+.compare-table__score { display: flex; align-items: baseline; justify-content: flex-end; gap: 10px; }
+.compare-table__value { font-family: var(--font-mono); font-weight: 600; font-size: 15px; }
+.compare-table__delta {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  min-width: 3.2ch;
+  text-align: right;
+}
+.compare-table__delta.is-up { color: var(--color-state-done); }
+.compare-table__delta.is-down { color: var(--color-state-paused); }
+.compare-table__link { font-size: 12px; white-space: nowrap; }
+.compare-table__caption {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--color-ink-3);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.compare-table__caption-mark {
+  width: 1.5px;
+  height: 12px;
+  background: var(--color-ink-3);
+  display: inline-block;
+}
+
+.intervention-form { display: flex; flex-direction: column; gap: 14px; align-items: flex-start; }
+.intervention-form .ds-field { width: 100%; }
 
 /* モーション抑制 */
 @media (prefers-reduced-motion: reduce) {

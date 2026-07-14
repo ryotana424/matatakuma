@@ -1,118 +1,98 @@
-- content_for(:title) { "説明 | Focus Pulse" }
+- content_for(:title) { "計測方法 | Focus Pulse" }
+- content_for(:header) { render "tasks/page_header", current: :about }
 
 = turbo_frame_tag "modal" do
-  .page-head
-    %p.page-kicker LOCAL REAL-TIME ESTIMATION
-    %h1.page-title Focus Pulse の計測方法
-    %p.page-lead
-      Focus Pulse は、Webカメラで「画面に向かう状態が続いているか」を見ます。
-      考えている内容や気持ちではなく、顔・目・頭の動きから作る目安です。
+  .about-page{ style: "display:flex;flex-direction:column;gap:var(--space-5)" }
+    .page-head
+      %h1.ds-page-title 計測方法
+      %p.page-lead
+        Focus Pulse は、Webカメラの映像から顔と目の動きを解析し、集中の状態を 0〜100 のスコアとして1秒ごとに記録します。
+        このページでは、計測の流れとスコアの計算方法、プライバシーの扱いを説明します。
 
-  .about-article
-    %section.panel.about-panel
-      %h2 計測の流れ
-      %ol
-        %li カメラ映像をブラウザ内で読み取り、MediaPipe FaceMesh で顔の位置を推定します。
-        %li 目の向き、頭の向き、顔が映っているか、まばたき、状態の途切れを毎秒まとめます。
-        %li 5つの指標を0〜1の値にそろえ、重みをかけて0〜100点のスコアにします。
-        %li 計測終了時は、平均スコアや状態別割合などの集計値だけをRailsへ保存します。
+    -# 計測の流れ
+    %section.ds-panel
+      .ds-panel__head
+        %h2.ds-panel__title 計測の流れ
+      %ol.flow-steps
+        %li.flow-step
+          %span.flow-step__num 1
+          %span.flow-step__body
+            %span.flow-step__title タスクを選んで計測開始
+            %span.flow-step__desc タスク一覧から計測したいタスクを選び、「計測開始」を押します。
+        %li.flow-step
+          %span.flow-step__num 2
+          %span.flow-step__body
+            %span.flow-step__title カメラを許可
+            %span.flow-step__desc ブラウザがカメラの使用許可を求めます。許可すると顔の検出が始まります。
+        %li.flow-step
+          %span.flow-step__num 3
+          %span.flow-step__body
+            %span.flow-step__title 作業に集中
+            %span.flow-step__desc 画面は見なくて構いません。1秒ごとにスコアが記録され続けます。
+        %li.flow-step
+          %span.flow-step__num 4
+          %span.flow-step__body
+            %span.flow-step__title 計測終了して保存
+            %span.flow-step__desc 作業を終えたら「計測終了して保存」。セッションとして記録され、日次レポートに反映されます。
 
-    %section.panel.about-panel
-      %h2 スコア計算
-      %p
-        スコアは、画面に向かう状態がどれだけ続いたかを0〜100で表した目安です。
-        点数が高いほど、顔が映り、視線と頭の向きが安定し、中断が少ない状態です。
-      %p
-        視線と頭の向きをやや重く見ます。顔検出率は「集中そのもの」よりも、計測できているかを確認する役割です。
+    -# スコアの計算
+    %section.ds-panel
+      .ds-panel__head
+        %h2.ds-panel__title スコアの計算
+      %p{ style: "margin:0;color:var(--color-ink-2)" }
+        集中スコアは5つの指標の加重平均です。各指標は 0〜100 に正規化され、以下の重みで合成されます。
       .formula-box
-        .formula-box__title score = 5つの指標の重み付き合計
-        .formula-row
-          %span GazeOnScreen（視線）
-          %strong 35%
-        .formula-row
-          %span HeadStable（頭の安定）
-          %strong 25%
-        .formula-row
-          %span BlinkNormal（まばたき）
-          %strong 15%
-        .formula-row
-          %span SessionContinuity（継続）
-          %strong 15%
-        .formula-row
-          %span FacePresent（顔検出）
-          %strong 10%
-      %p
-        状態は4段階です。顔が半分以上の時間で見えなければ AWAY、
+        スコア = 視線 × 0.35 ＋ 頭の安定 × 0.25 ＋ まばたき × 0.15
+        %br/
+        　　　　＋ 継続 × 0.15 ＋ 顔検出 × 0.10
+      .metric-rows
+        - metrics = [["視線", "35%", "視線が画面（作業対象）に向いているか。集中の最も直接的な指標として最大の重みを持ちます。"], ["頭の安定", "25%", "頭の位置と向きの安定性。頻繁な首振りや姿勢の崩れは集中の低下を示します。"], ["まばたき", "15%", "まばたきの頻度。深い集中時はまばたきが減り、疲労や散漫時は増える傾向があります。"], ["継続", "15%", "集中状態がどれだけ途切れず続いているか。短い中断の繰り返しはスコアを下げます。"], ["顔検出", "10%", "顔がカメラに検出されているか。離席や大きな姿勢変化を捉えます。"]]
+        - metrics.each do |name, weight, desc|
+          .metric-row
+            %span.metric-row__name
+              %span.metric-row__label= name
+              %span.metric-row__weight= weight
+            %span.metric-row__desc= desc
+
+    -# 状態の判定
+    %section.ds-panel
+      .ds-panel__head
+        %h2.ds-panel__title 状態の判定
+      %p{ style: "margin:0;color:var(--color-ink-2)" }
+        スコアと顔検出率から、状態を4段階で表示します。顔が半分以上の時間で見えなければ AWAY（離席）、
         スコア90以上かつ顔検出率85%以上なら HIGH、65以上なら MEDIUM、それ以外は LOW です。
 
-    %section.panel.about-panel
-      %h2 指標の意味
-      .metric-list
-        .metric-item
-          .metric-copy
-            %strong GazeOnScreen
-            %span
-              目が画面方向を向いているかの目安です。虹彩が目の中央から大きく外れると、
-              画面外を見ている可能性が高いとして下がります。
-          .metric-thumb.metric-thumb--gaze{ "aria-label": "GazeOnScreen（視線）のイラスト" }
-            = image_tag "focus-metric-gaze.png", alt: "", loading: "lazy"
-        .metric-item
-          .metric-copy
-            %strong HeadStable
-            %span
-              頭が正面に近い向きで安定しているかの目安です。横を向く、うつむく、顔の角度が大きく変わるほど下がります。
-          .metric-thumb.metric-thumb--head{ "aria-label": "HeadStable（頭の安定）のイラスト" }
-            = image_tag "focus-metric-head.png", alt: "", loading: "lazy"
-        .metric-item
-          .metric-copy
-            %strong FacePresent
-            %span
-              顔がカメラに映っていた割合です。席を外す、顔が画面外に出る、暗くて検出できないと下がります。
-          .metric-thumb.metric-thumb--face{ "aria-label": "FacePresent（顔検出）のイラスト" }
-            = image_tag "focus-metric-face.png", alt: "", loading: "lazy"
-        .metric-item
-          .metric-copy
-            %strong BlinkNormal
-            %span
-              目を閉じている時間が長すぎないかの目安です。通常のまばたきは問題ありませんが、閉眼が続くと下がります。
-          .metric-thumb.metric-thumb--blink{ "aria-label": "BlinkNormal（まばたき）のイラスト" }
-            = image_tag "focus-metric-blink.png", alt: "", loading: "lazy"
-        .metric-item
-          .metric-copy
-            %strong SessionContinuity
-            %span
-              画面に向かう状態が途切れず続いたかの目安です。顔ロスト、視線逸脱、頭の大きな動きが多いほど下がります。
-          .metric-thumb.metric-thumb--continuity{ "aria-label": "SessionContinuity（継続）のイラスト" }
-            = image_tag "focus-metric-continuity.png", alt: "", loading: "lazy"
+    -# プライバシー方針
+    %section.ds-panel
+      .ds-panel__head
+        %h2.ds-panel__title{ style: "display:flex;align-items:center;gap:10px" }
+          %span.privacy-dot
+          プライバシー方針
+      %ul.privacy-list
+        %li カメラ映像・静止画・顔の座標データは、すべてブラウザ内だけで処理されます。
+        %li サーバに送信・保存されるのは、スコアや時間などの集計値のみです。
+        %li 映像はどこにも録画されず、計測終了と同時に破棄されます。
+        %li サーバは 127.0.0.1 のみにバインドし、外部からアクセスできない構成です。
 
-    %section.panel.about-panel
-      %h2 根拠
-      %p
-        このアプリは、顔・目のランドマークから行動の目安を作ります。
-        MediaPipe FaceMesh は、一般的なWebカメラ映像から顔の3Dランドマークをリアルタイムに推定できます。
-      %p
-        まばたきや閉眼は、目の横幅と縦幅の比率を見る Eye Aspect Ratio 型の考え方です。
-        視線は専用アイトラッカーではなく、虹彩位置のずれを見る簡易推定です。
-      %h3 参考
-      %ul
+    -# 根拠・参考
+    %section.ds-panel
+      .ds-panel__head
+        %h2.ds-panel__title 根拠と参考
+      %p{ style: "margin:0 0 12px;color:var(--color-ink-2)" }
+        顔・目のランドマークから行動の目安を作ります。MediaPipe FaceMesh は一般的なWebカメラ映像から
+        顔の3Dランドマークをリアルタイムに推定できます。まばたきは目の縦横比を見る Eye Aspect Ratio 型、
+        視線は虹彩位置のずれを見る簡易推定です。
+      %ul.ref-list
         %li= link_to "MediaPipe Face Mesh documentation", "https://chuoling.github.io/mediapipe/solutions/face_mesh.html", target: "_blank", rel: "noreferrer"
         %li= link_to "MediaPipe Iris documentation", "https://chuoling.github.io/mediapipe/solutions/iris.html", target: "_blank", rel: "noreferrer"
         %li= link_to "MediaPipe: A Framework for Building Perception Pipelines", "https://arxiv.org/abs/1906.08172", target: "_blank", rel: "noreferrer"
         %li Tereza Soukupova and Jan Cech, Real-Time Eye Blink Detection using Facial Landmarks, 2016.
 
-    %section.panel.about-panel.warning-panel
-      %h2 限界
-      %p
-        %strong 認知的集中の直接測定ではありません。
-        測っているのは、カメラから見える顔・目・頭部の状態だけです。
-      %p
+    -# 限界
+    %section.ds-panel
+      .ds-panel__head
+        %h2.ds-panel__title 限界
+      %p{ style: "margin:0;color:var(--color-ink-2)" }
+        認知的集中の直接測定ではありません。測っているのは、カメラから見える顔・目・頭部の状態だけです。
         照明、カメラ位置、眼鏡、髪、顔の向き、画面外資料を見る作業などで値は変わります。
         人事評価、監視、懲戒判断、医療判断には使わないでください。
-
-    %section.panel.about-panel
-      %h2 プライバシー
-      %ul
-        %li 映像解析はブラウザ上で実行されます。
-        %li 映像、画像、ランドマーク座標はサーバへ送信しません。
-        %li サーバに保存するのは平均スコア、状態別割合、中断回数、計測秒数などの集計値だけです。
-        %li サーバは 127.0.0.1 のみにバインドし、外部からアクセスできない構成です。

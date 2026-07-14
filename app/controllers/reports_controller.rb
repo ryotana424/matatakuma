@@ -1,6 +1,21 @@
 class ReportsController < ApplicationController
   def index
-    @dates = Session.order(started_at: :desc).pluck(:started_at).map(&:to_date).uniq
+    # 全セッションを1回だけロードし、日付ごとに配列上で集計する（追加クエリを出さない）
+    sessions = Session.includes(:task).order(started_at: :desc).to_a
+    days = sessions.group_by { |session| session.started_at.to_date }.map do |date, day_sessions|
+      summary = SessionAnalytics.summary(day_sessions)
+      {
+        date: date,
+        avg_score: summary[:avg_score],
+        total_duration_sec: summary[:total_duration_sec]
+      }
+    end.sort_by { |day| day[:date] }.reverse
+    # 月（年月）ごとにグループ化して新しい月から並べる
+    @months = days.group_by { |day| [day[:date].year, day[:date].month] }
+      .sort_by { |(year, month), _days| [-year, -month] }
+      .map do |(year, month), month_days|
+        { label: "#{year}年#{month}月", days: month_days }
+      end
   end
 
   def show

@@ -1,35 +1,77 @@
-- content_for(:title) { "施策一覧 | Focus Pulse" }
+- content_for(:title) { "施策 | Focus Pulse" }
+- content_for(:header) { render "tasks/page_header", current: :interventions }
 
 = turbo_frame_tag "modal" do
-  .page-head
-    %h1.page-title 施策一覧
-    %p.page-lead
-      集中力改善のために試す施策を登録し、適用したセッションと非適用セッションを比較します。
+  .intervention-index{ style: "display:flex;flex-direction:column;gap:var(--space-4)" }
+    .page-head
+      %div{ style: "display:flex;align-items:center;gap:12px" }
+        %h1.ds-page-title 施策
+        = link_to "＋ 施策追加", "#intervention-add", class: "ds-btn ds-btn--sm", style: "margin-left:auto;white-space:nowrap"
+      %p.page-lead
+        集中力改善のために試す施策を登録し、施策ありセッションの平均スコアを施策なし（ベースライン）と比較します。
 
-  %section.panel.report-section
-    %h2.report-section__title 施策を追加
-    = form_with model: @intervention, url: interventions_path, class: "report-form" do |f|
-      .report-form__field
-        = f.label :name, "施策名"
-        = f.text_field :name, class: "input", placeholder: "例: ポモドーロ（25分作業+5分休憩）"
-        - if @intervention.errors[:name].present?
-          %span.field-error= "施策名#{@intervention.errors[:name].first}"
-      .report-form__field
-        = f.label :description, "説明"
-        = f.text_area :description, rows: 2, class: "input report-textarea"
-      = f.submit "追加", class: "btn btn--primary"
+    -# ベースライン
+    %section.baseline-panel
+      %span.baseline-panel__label 施策なしの平均スコア（ベースライン）
+      %span.baseline-panel__value= @baseline_score || "--"
+      %span.baseline-panel__meta
+        - if @baseline_count.to_i.positive?
+          = "セッション #{@baseline_count} 件 · 以下の比較の基準値"
+        - else
+          施策なしのセッションがまだありません
 
-  - if @interventions.any?
-    .report-list
-      - @interventions.each do |intervention|
-        = link_to intervention_path(intervention), class: "panel report-date-card" do
-          %span.report-date-card__date= intervention.name
-          %span.report-date-card__label= "適用セッション #{@session_counts[intervention.id].to_i}件"
-  - else
-    .panel.empty-state
-      %p.empty-state__title まだ施策はありません
-      %p 施策を追加し、計測画面で選択すると効果を比較できます。
+    -# 効果比較
+    %section.ds-panel
+      .ds-panel__head
+        %h2.ds-panel__title 効果比較
+        %span.ds-panel__hint 施策ありセッションの平均スコアと、施策なしとの差
+      - if @comparisons.any?
+        .compare-table
+          .compare-table__head
+            %span 施策
+            %span.compare-table__cell--right セッション
+            %span 平均スコア（0–100）
+            %span.compare-table__cell--right 差分
+          - @comparisons.each do |row|
+            .compare-table__row
+              %span.compare-table__name
+                %span.compare-table__title= row[:intervention].name
+                - if row[:intervention].description.present?
+                  %span.compare-table__note= row[:intervention].description
+                - elsif row[:count].to_i.zero?
+                  %span.compare-table__note 未計測
+              %span.compare-table__cell--right.compare-table__cell--mono= row[:count]
+              %span.compare-table__bar-cell
+                %span.compare-table__bar
+                  - if row[:avg_score]
+                    %span.compare-table__bar-fill{ style: "width:#{row[:avg_score]}%" }
+                  - if @baseline_score
+                    %span.compare-table__baseline{ style: "left:#{@baseline_score}%", title: "ベースライン #{@baseline_score}" }
+              %span.compare-table__score
+                %span.compare-table__value= row[:avg_score] || "--"
+                - if row[:delta]
+                  %span.compare-table__delta{ class: (row[:delta] >= 0 ? "is-up" : "is-down") }
+                    = "#{row[:delta] >= 0 ? '+' : '−'}#{row[:delta].abs}"
+                - else
+                  %span.compare-table__delta{ style: "color:var(--color-ink-3)" } —
+                = link_to "詳細", intervention_path(row[:intervention]), class: "compare-table__link", data: { turbo_frame: "modal" }
+        %p.compare-table__caption
+          %span.compare-table__caption-mark
+          縦線はベースライン（施策なし#{@baseline_score ? " #{@baseline_score}" : ""}）。セッション数が少ない施策の差分は参考値です。
+      - else
+        %p.report-empty{ style: "margin:0;color:var(--color-ink-3)" } まだ施策はありません。下のフォームから追加してください。
 
-  %footer.page-foot
-    = link_to "タスク一覧へ", tasks_path, class: "btn btn--ghost", data: { turbo_frame: "_top" }
-    = link_to "日次レポートへ", reports_path, class: "btn btn--ghost"
+    -# 施策追加
+    %section.ds-panel#intervention-add
+      .ds-panel__head
+        %h2.ds-panel__title 施策を追加
+      = form_with model: @intervention, url: interventions_path, class: "intervention-form" do |f|
+        .ds-field
+          = f.label :name, "施策名", class: "ds-field__label"
+          = f.text_field :name, class: "ds-input", placeholder: "例：昼休み後に5分散歩"
+          - if @intervention.errors[:name].present?
+            %span.field-error= "施策名#{@intervention.errors[:name].first}"
+        .ds-field
+          = f.label :description, "説明（任意）", class: "ds-field__label"
+          = f.text_area :description, rows: 2, class: "ds-textarea", placeholder: "どんな施策か短くメモ"
+        = f.submit "追加", class: "ds-btn ds-btn--primary"

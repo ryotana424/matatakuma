@@ -52,10 +52,14 @@ export default class extends Controller {
     this.drawIdleCanvas()
     this.drawScoreTrend()
     this.initDebugPanel()
+    // ウィンドウ幅・高さの変化でパルスチャートを描き直す（表示サイズ追従）
+    this.onResize = () => this.drawScoreTrend()
+    window.addEventListener("resize", this.onResize)
     this.start()
   }
 
   disconnect() {
+    if (this.onResize) window.removeEventListener("resize", this.onResize)
     this.shutdown()
   }
 
@@ -625,11 +629,25 @@ export default class extends Controller {
     this.ctx.fillRect(0, 0, this.canvasTarget.width, this.canvasTarget.height)
   }
 
-  drawScoreTrend() {
+  // パルスキャンバスの描画バッファを実際の表示サイズ（CSS px × DPR）に合わせる。
+  // パネルが縦に伸びてもチャートがぼやけず、CSS px 座標で描けるよう変換を掛ける。
+  resizePulseCanvas() {
     const canvas = this.pulseCanvasTarget
+    const cssWidth = canvas.clientWidth || canvas.width
+    const cssHeight = canvas.clientHeight || canvas.height
+    const dpr = window.devicePixelRatio || 1
+    const bufferWidth = Math.round(cssWidth * dpr)
+    const bufferHeight = Math.round(cssHeight * dpr)
+    if (canvas.width !== bufferWidth) canvas.width = bufferWidth
+    if (canvas.height !== bufferHeight) canvas.height = bufferHeight
+    // 以降の描画は CSS px 座標で行う
+    this.pulseCtx.setTransform(dpr, 0, 0, dpr, 0, 0)
+    return { width: cssWidth, height: cssHeight }
+  }
+
+  drawScoreTrend() {
     const ctx = this.pulseCtx
-    const width = canvas.width
-    const height = canvas.height
+    const { width, height } = this.resizePulseCanvas()
     // 軸ラベルは HTML 側（.measure-pulse__y / __x）で重ねるため、canvas は全幅で描く
     const plotWidth = width
     const scoreToY = (score) => {

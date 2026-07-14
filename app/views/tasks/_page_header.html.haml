@@ -1,14 +1,24 @@
--# 計測・タスク一覧画面のヘッダー（デザイン準拠: ブランド＋パンくず）
--# current: :measure か :tasks。パンくずの現在地表示に使う
-- current ||= :tasks
+-# 全画面共通のグローバルヘッダー（デザイン準拠: ブランド＋フラットナビ＋現在地ハイライト）
+-# current: :measure / :reports / :interventions / :about のいずれか。現在地を太字表示にする
+- current ||= :measure
 %header.fp-header
   = link_to root_path, class: "fp-brand" do
     %span.fp-brand__mark{ "aria-hidden": true }
     %span.fp-brand__name Focus Pulse
-  %nav.fp-crumbs{ "aria-label": "パンくず" }
+  %nav.fp-nav{ "aria-label": "メイン" }
     - if current == :measure
-      %span.fp-crumbs__here 計測
+      %span.fp-nav__here{ "aria-current": "page" } 計測
     - else
-      = link_to "計測", root_path, class: "fp-crumbs__link"
-    %span.fp-crumbs__sep /
-    = link_to "日次レポート", reports_path, class: "fp-crumbs__link", data: { turbo_frame: "modal" }
+      = link_to "計測", root_path, class: "fp-nav__link"
+    - if current == :reports
+      %span.fp-nav__here{ "aria-current": "page" } 日次レポート
+    - else
+      = link_to "日次レポート", reports_path, class: "fp-nav__link", data: { turbo_frame: "modal" }
+    - if current == :interventions
+      %span.fp-nav__here{ "aria-current": "page" } 施策
+    - else
+      = link_to "施策", interventions_path, class: "fp-nav__link", data: { turbo_frame: "modal" }
+    - if current == :about
+      %span.fp-nav__here{ "aria-current": "page" } 計測方法
+    - else
+      = link_to "計測方法", about_path, class: "fp-nav__link", data: { turbo_frame: "modal" }

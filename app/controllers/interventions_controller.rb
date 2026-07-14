@@ -4,8 +4,7 @@ class InterventionsController < ApplicationController
   def index
     @interventions = Intervention.order(created_at: :desc)
     @intervention = Intervention.new
-    # 一覧で施策ごとの適用セッション数を出すための1クエリ集計
-    @session_counts = Session.where.not(intervention_id: nil).group(:intervention_id).count
+    load_index_comparison
   end
 
   def create
@@ -18,7 +17,7 @@ class InterventionsController < ApplicationController
       end
     else
       @interventions = Intervention.order(created_at: :desc)
-      @session_counts = Session.where.not(intervention_id: nil).group(:intervention_id).count
+      load_index_comparison
       render :index, status: :unprocessable_entity
     end
   end
@@ -45,6 +44,33 @@ class InterventionsController < ApplicationController
 
   def set_intervention
     @intervention = Intervention.find(params[:id])
+  end
+
+  # 一覧画面でベースライン（施策なしの平均スコア）と施策ごとの効果比較を作る。
+  # 全セッションを1回だけロードし、施策IDで振り分けて配列上で集計する。
+  def load_index_comparison
+    all_sessions = Session.order(started_at: :desc).to_a
+    baseline_sessions = all_sessions.select { |session| session.intervention_id.nil? }
+    by_intervention = all_sessions.reject { |session| session.intervention_id.nil? }
+      .group_by(&:intervention_id)
+
+    baseline_summary = SessionAnalytics.summary(baseline_sessions)
+    @baseline_score = baseline_summary[:avg_score]
+    @baseline_count = baseline_summary[:count]
+
+    @comparisons = @interventions.map do |intervention|
+      sessions = by_intervention[intervention.id] || []
+      summary = SessionAnalytics.summary(sessions)
+      delta = if summary[:avg_score] && @baseline_score
+        summary[:avg_score] - @baseline_score
+      end
+      {
+        intervention: intervention,
+        count: summary[:count],
+        avg_score: summary[:avg_score],
+        delta: delta
+      }
+    end
   end
 
   def load_comparison
