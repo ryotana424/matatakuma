@@ -30,7 +30,7 @@ class TaskTest < ActiveSupport::TestCase
     assert_equal 0, task.total_duration_sec
   end
 
-  test "平均集中スコアは完了済みセッションの平均を整数で返す" do
+  test "平均集中スコアは完了と中断セッションの平均を整数で返す" do
     task = Task.create!(name: "平均集計")
     task.sessions.create!(started_at: 2.hours.ago, ended_at: 1.hour.ago, duration_sec: 600, avg_score: 71,
                           high_ratio: 0.5, medium_ratio: 0.3, low_ratio: 0.1, away_ratio: 0.1, interrupt_count: 2,
@@ -38,19 +38,22 @@ class TaskTest < ActiveSupport::TestCase
     task.sessions.create!(started_at: 30.minutes.ago, ended_at: 10.minutes.ago, duration_sec: 300, avg_score: 84,
                           high_ratio: 0.4, medium_ratio: 0.4, low_ratio: 0.1, away_ratio: 0.1, interrupt_count: 1,
                           status: :completed)
+    task.sessions.create!(started_at: 10.minutes.ago, ended_at: 5.minutes.ago, duration_sec: 300, avg_score: 90,
+                          high_ratio: 0.4, medium_ratio: 0.4, low_ratio: 0.1, away_ratio: 0.1, interrupt_count: 1,
+                          status: :interrupted, ended_reason: "timeout")
     task.sessions.create!(started_at: Time.current, duration_sec: 0, avg_score: 10, status: :running)
 
-    assert_equal 78, task.average_score
+    assert_equal 82, task.average_score
   end
 
-  test "完了済みセッションが無いタスクの平均集中スコアはnil" do
+  test "終了済みセッションが無いタスクの平均集中スコアはnil" do
     task = Task.create!(name: "未完了")
     task.sessions.create!(started_at: Time.current, duration_sec: 0, avg_score: 10, status: :running)
 
     assert_nil task.average_score
   end
 
-  test "集中度総量は完了済みセッションの離席時間を除いて算出できる" do
+  test "集中度総量は完了と中断セッションを合算して計測中を除く" do
     task = Task.create!(name: "総量集計")
     task.sessions.create!(started_at: 2.hours.ago, ended_at: 1.hour.ago, duration_sec: 1200, avg_score: 70,
                           high_ratio: 0.5, medium_ratio: 0.3, low_ratio: 0.1, away_ratio: 0.1, interrupt_count: 2,
@@ -58,12 +61,15 @@ class TaskTest < ActiveSupport::TestCase
     task.sessions.create!(started_at: 30.minutes.ago, ended_at: 10.minutes.ago, duration_sec: 600, avg_score: 90,
                           high_ratio: 0.4, medium_ratio: 0.4, low_ratio: 0.1, away_ratio: 0.1, interrupt_count: 1,
                           status: :completed)
-    task.sessions.create!(started_at: Time.current, duration_sec: 300, avg_score: 10, status: :running)
+    task.sessions.create!(started_at: 10.minutes.ago, ended_at: 5.minutes.ago, duration_sec: 300, avg_score: 60,
+                          status: :interrupted, ended_reason: "timeout", focus_volume: 600)
+    task.sessions.create!(started_at: Time.current, duration_sec: 300, avg_score: 10,
+                          status: :running, focus_volume: 999)
 
-    assert_equal 2070, task.focus_volume
+    assert_equal 2670, task.focus_volume
   end
 
-  test "完了済みセッションが無いタスクの集中度総量はnil" do
+  test "終了済みセッションが無いタスクの集中度総量はnil" do
     task = Task.create!(name: "未完了")
     task.sessions.create!(started_at: Time.current, duration_sec: 300, avg_score: 10, status: :running)
 

@@ -23,6 +23,7 @@ class Session < ApplicationRecord
   scope :on_date, ->(date) {
     where(started_at: date.all_day)
   }
+  scope :finished, -> { where(status: %i[completed interrupted]) }
 
   # 新しいセッションはクライアントが在席サンプルから算出した正確な値を持つ。
   # 移行前データや手入力レコードは、離席率を除いた時間から近似する。

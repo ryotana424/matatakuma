@@ -26,7 +26,7 @@ class TasksController < ApplicationController
     @task = Task.find(params[:id])
     @task.doing! if @task.todo?
     @interventions = Intervention.order(created_at: :desc)
-    @previous_session = @task.sessions.completed.order(started_at: :desc).first
+    @previous_session = @task.sessions.finished.order(started_at: :desc).first
     @tasks = Task.order(created_at: :desc)
     @new_task = Task.new
     @daily_sessions = load_daily_sessions
@@ -34,9 +34,9 @@ class TasksController < ApplicationController
 
   private
 
-  # ステータスバー用に本日の完了セッションを配列でロードする
+  # ステータスバー用に本日の終了済み（完了・中断）セッションを配列でロードする
   def load_daily_sessions
-    Session.completed.on_date(Date.current).to_a
+    Session.finished.on_date(Date.current).to_a
   end
 
   def task_params

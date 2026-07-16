@@ -131,12 +131,13 @@ class TasksControllerTest < ActionDispatch::IntegrationTest
     assert task.reload.doing?
   end
 
-  test "計測画面にこのセッション平均と前回セッション平均が表示される" do
+  test "計測画面の前回セッション平均は中断セッションも対象にする" do
     task = Task.create!(name: "計測タスク")
     older = task.sessions.create!(started_at: 2.hours.ago, ended_at: 1.hour.ago,
                                   duration_sec: 3600, avg_score: 71, status: :completed)
     task.sessions.create!(started_at: 30.minutes.ago, ended_at: 5.minutes.ago,
-                          duration_sec: 1500, avg_score: 84, status: :completed)
+                          duration_sec: 1500, avg_score: 84, status: :interrupted,
+                          ended_reason: "timeout")
     task.sessions.create!(started_at: 1.minute.ago, duration_sec: 0,
                           avg_score: 10, status: :running)
 
@@ -179,12 +180,12 @@ class TasksControllerTest < ActionDispatch::IntegrationTest
     assert_select ".measure-camera__empty", /「計測開始」を押すと計測が始まります/
   end
 
-  test "一覧ページに本日のステータスバーが表示される" do
+  test "一覧ページの本日集計は完了と中断セッションを対象にする" do
     task = Task.create!(name: "コーディング")
     task.sessions.create!(started_at: 2.hours.ago, ended_at: 1.hour.ago, duration_sec: 1800,
                           avg_score: 80, status: :completed)
     task.sessions.create!(started_at: 1.hour.ago, ended_at: 30.minutes.ago, duration_sec: 600,
-                          avg_score: 60, status: :completed)
+                          avg_score: 60, status: :interrupted, ended_reason: "timeout")
 
     get tasks_url
 

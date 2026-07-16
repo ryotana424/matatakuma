@@ -114,4 +114,16 @@ class SessionTest < ActiveSupport::TestCase
     assert_equal 1, Session.on_date(Date.new(2026, 6, 26)).count
     assert_equal 0, Session.on_date(Date.new(2026, 6, 25)).count
   end
+
+  test "終了済みスコープは完了と中断を含み計測中を除く" do
+    completed = @task.sessions.create!(started_at: 3.minutes.ago, ended_at: 2.minutes.ago,
+                                       duration_sec: 60, avg_score: 70, status: :completed)
+    interrupted = @task.sessions.create!(started_at: 2.minutes.ago, ended_at: 1.minute.ago,
+                                         duration_sec: 60, avg_score: 60, status: :interrupted,
+                                         ended_reason: "timeout")
+    @task.sessions.create!(started_at: 1.minute.ago, duration_sec: 30, avg_score: 50, status: :running)
+
+    assert_respond_to Session, :finished
+    assert_equal [completed.id, interrupted.id].sort, Session.finished.pluck(:id).sort
+  end
 end
