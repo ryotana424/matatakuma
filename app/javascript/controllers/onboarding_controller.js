@@ -76,14 +76,15 @@ export default class extends Controller {
     }
     this.bubbleTarget.classList.remove("onboarding__bubble--center")
     const rect = el.getBoundingClientRect()
+    // .onboarding は position:fixed のため、getBoundingClientRect の値（ビューポート基準）をそのまま使う
     this.highlightTarget.hidden = false
-    this.highlightTarget.style.top = `${rect.top + window.scrollY}px`
-    this.highlightTarget.style.left = `${rect.left + window.scrollX}px`
+    this.highlightTarget.style.top = `${rect.top}px`
+    this.highlightTarget.style.left = `${rect.left}px`
     this.highlightTarget.style.width = `${rect.width}px`
     this.highlightTarget.style.height = `${rect.height}px`
     // 吹き出しは対象の下に置く（画面端は CSS 側で clamp）
-    this.bubbleTarget.style.top = `${rect.bottom + window.scrollY + 12}px`
-    this.bubbleTarget.style.left = `${rect.left + window.scrollX}px`
+    this.bubbleTarget.style.top = `${rect.bottom + 12}px`
+    this.bubbleTarget.style.left = `${rect.left}px`
   }
 
   hide() {
@@ -124,8 +125,133 @@ export default class extends Controller {
     this.hide()
   }
 
-  // --- 以下、完了トリガー監視は Task5 で実装する ---
-  setupAdvanceWatch(_step) {}
+  // ステップの完了トリガーを監視する。検出したら goToNext() を呼ぶ。
+  // NAVIGATE は別ページで復元されるため、ここでは何も待たない（対象クリックは阻害しない）。
+  setupAdvanceWatch(step) {
+    // target 指定ありなのに要素がまだ無い場合は、出現を待って配置し直してから監視を張る。
+    if (step.target && !document.querySelector(step.target)) {
+      this.waitForTarget(step.target, () => {
+        this.positionFor(step)
+        this.attachAdvance(step)
+      })
+      return
+    }
+    this.attachAdvance(step)
+  }
+
+  attachAdvance(step) {
+    switch (step.advance) {
+      case ADVANCE.TOUR_BUTTON:
+        // ボタンの click は advanceByButton() が拾う。追加監視は不要。
+        break
+      case ADVANCE.CLICK_TARGET:
+        this.watchClick(step.target)
+        break
+      case ADVANCE.MODAL_OPEN:
+        this.watchModalOpen(step.modalTarget)
+        break
+      case ADVANCE.CAMERA_START:
+        this.watchCameraStart()
+        break
+      case ADVANCE.TIMER:
+        this.watchTimer(step.timerMs || 5000)
+        break
+      case ADVANCE.ELEMENT_APPEAR:
+        this.watchElementAppear(step.appearTarget)
+        break
+      case ADVANCE.NAVIGATE:
+        // 遷移先ページで resolveVisibleStep により次ステップが復元される。ここでは待たない。
+        break
+    }
+  }
+
+  // 対象要素が DOM に現れるまで待ち、現れたら cb を1度だけ呼ぶ。
+  waitForTarget(selector, cb) {
+    const existing = document.querySelector(selector)
+    if (existing) { cb(); return }
+    const observer = new MutationObserver(() => {
+      if (document.querySelector(selector)) {
+        observer.disconnect()
+        cb()
+      }
+    })
+    observer.observe(document.body, { childList: true, subtree: true })
+    this.cleanupFns.push(() => observer.disconnect())
+  }
+
+  watchClick(selector) {
+    const el = document.querySelector(selector)
+    if (!el) return
+    const handler = () => this.goToNext()
+    el.addEventListener("click", handler, { once: true })
+    this.cleanupFns.push(() => el.removeEventListener("click", handler))
+  }
+
+  // 対象モーダルに open クラスが付いたら次へ。
+  watchModalOpen(modalSelector) {
+    const modal = document.querySelector(modalSelector)
+    if (!modal) return
+    if (modal.classList.contains("open")) { this.goToNext(); return }
+    const observer = new MutationObserver(() => {
+      if (modal.classList.contains("open")) {
+        observer.disconnect()
+        this.goToNext()
+      }
+    })
+    observer.observe(modal, { attributes: true, attributeFilter: ["class"] })
+    this.cleanupFns.push(() => observer.disconnect())
+  }
+
+  // 計測画面の video が再生を始めたら（カメラ許可完了）次へ。
+  // placeholder が hidden になるか、video の playing を検出する。
+  watchCameraStart() {
+    const video = document.querySelector("[data-measure-target=\"video\"]")
+    const placeholder = document.querySelector("[data-measure-target=\"placeholder\"]")
+    let videoCleanup = null
+    let phObserver = null
+
+    const cleanup = () => {
+      if (typeof videoCleanup === "function") videoCleanup()
+      if (phObserver) phObserver.disconnect()
+    }
+    const done = () => { cleanup(); this.goToNext() }
+
+    if (video) {
+      if (video.srcObject && !video.paused) { done(); return }
+      const onPlaying = () => done()
+      video.addEventListener("playing", onPlaying, { once: true })
+      videoCleanup = () => video.removeEventListener("playing", onPlaying)
+      this.cleanupFns.push(() => { if (typeof videoCleanup === "function") videoCleanup() })
+    }
+
+    if (placeholder) {
+      if (placeholder.hidden) { done(); return }
+      phObserver = new MutationObserver(() => {
+        if (placeholder.hidden) done()
+      })
+      phObserver.observe(placeholder, { attributes: true, attributeFilter: ["hidden"] })
+      this.cleanupFns.push(() => { if (phObserver) phObserver.disconnect() })
+    }
+  }
+
+  watchTimer(ms) {
+    const id = setTimeout(() => this.goToNext(), ms)
+    this.cleanupFns.push(() => clearTimeout(id))
+  }
+
+  // 指定要素が DOM に出現したら次へ（例: レポート詳細 .report-detail）。
+  watchElementAppear(selector) {
+    if (document.querySelector(selector)) { this.goToNext(); return }
+    const observer = new MutationObserver(() => {
+      if (document.querySelector(selector)) {
+        observer.disconnect()
+        this.goToNext()
+      }
+    })
+    observer.observe(document.body, { childList: true, subtree: true })
+    this.cleanupFns.push(() => observer.disconnect())
+  }
+
   teardownAdvanceWatch() {
     if (!this.cleanupFns) return
     this.cleanupFns.forEach((fn) => fn())
