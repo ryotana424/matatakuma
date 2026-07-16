@@ -2,6 +2,10 @@ export const FACE_ABSENCE_TIMEOUT_MS = 30 * 60 * 1000
 export const FRAME_STALE_AFTER_MS = 5000
 export const FACE_RETURN_CONFIRM_MS = 3 * 1000
 
+export function isFrameFresh(latestFrame, nowMs, staleAfterMs = FRAME_STALE_AFTER_MS) {
+  return Boolean(latestFrame) && nowMs - latestFrame.ts < staleAfterMs
+}
+
 // 顔が見えない状態、またはカメラフレームが届かない状態の終了期限を返す。
 // null は直近のフレームで顔を検出できており、計測を継続できる状態。
 export function faceAbsenceDeadlineMs({

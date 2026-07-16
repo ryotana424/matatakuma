@@ -10,14 +10,26 @@ assert.equal(source.includes(".drawImage("), false, "カメラ映像をcanvasへ
 assert.equal(source.includes("drawPrivacySurface"), true, "匿名化された表示面を描画する")
 assert.equal(source.includes("static targets = [\"video\", \"canvas\", \"score\", \"state\", \"stopBtn\", \"placeholder\", \"message\", \"cameraSelect\", \"pulseCanvas\", \"blinkCount\", \"sessionAverage\", \"miniSessionAverage\", \"sessionElapsed\", \"miniStatus\", \"interventionSelect\", \"dailyDuration\", \"dailyFocusVolume\", \"dailyAverage\"]"), true, "カメラ選択・波形canvas・セッション指標・ミニ表示状態・施策選択・日次ステータスのtargetを持つ")
 assert.equal(source.includes("this.start()"), true, "画面表示時に自動で計測開始する")
+const startSource = source.slice(source.indexOf("async start()"), source.indexOf("\n  async populateCameraOptions("))
+assert.equal(startSource.includes('error.name === "AbortError"'), true, "無効化された初期カメラ開始ではセッションを開始しない")
 assert.equal(source.includes("enumerateDevices()"), true, "利用可能なカメラを列挙する")
 assert.equal(source.includes("deviceId: { exact: deviceId }"), true, "選択したカメラIDで起動する")
 assert.equal(source.includes("changeCamera("), true, "カメラ切替アクションを持つ")
+assert.equal((source.match(/getUserMedia\(/g) || []).length, 1, "カメラ映像は開始処理ごとに1回だけ取得する")
+assert.equal(source.includes("new Camera("), false, "カメラを再取得するMediaPipe Camera補助クラスを使わない")
+assert.equal(source.includes("new MediaPipeFrameLoop("), true, "取得済み映像をMediaPipeへ渡すフレームループを使う")
+assert.equal(source.includes("this.cameraStartGeneration = 0"), true, "カメラ開始処理を世代で無効化できる")
+assert.equal(source.includes("const generation = ++this.cameraStartGeneration"), true, "カメラ開始ごとに新しい世代を発行する")
+assert.equal(source.includes('document.addEventListener("visibilitychange"'), true, "タブの表示状態変更を監視する")
+assert.equal(source.includes("this.frameLoop.setBackground(document.hidden)"), true, "別タブ中はバックグラウンド解析へ切り替える")
+assert.equal(source.includes('document.removeEventListener("visibilitychange"'), true, "画面破棄時に表示状態監視を解除する")
 assert.equal(source.includes("SCORE_HISTORY_MAX_POINTS = 30 * 60"), true, "スコア推移は最大過去30分を保持する")
 assert.equal(source.includes("drawScoreTrend("), true, "スコア推移を折れ線グラフに描画する")
 assert.equal(source.includes("const y = scoreToY(score)"), true, "スコア値をそのまま折れ線の高さへ変換する")
 assert.equal(source.includes("const beat"), false, "心電図風の拍動補正を使わない")
 assert.equal(source.includes("isFaceTemporarilyAbsent(this.frameBuffer)"), true, "一時的な顔ロスト中はスコア保存を待つ")
+assert.equal(source.includes("isFrameFresh(latestFrame, now)"), true, "古いカメラフレームをスコアへ再利用しない")
+assert.equal(source.includes("if (!isFrameFresh(latestFrame, now)) this.frameBuffer = []"), true, "5秒以上フレームが空いた後は停止前の解析値を捨てる")
 assert.equal(source.includes("this.scoreTarget.textContent = \"—\""), true, "一時的な顔ロスト中はスコアを表示しない")
 assert.equal(source.includes("this.stateTarget.dataset.state = \"interrupted\""), true, "一時的な顔ロスト中の表示状態を持つ")
 assert.equal(source.includes("\"sessionAverage\""), true, "このセッションの平均スコア表示targetを持つ")
@@ -36,6 +48,24 @@ const changeCameraSource = source.slice(
   source.indexOf("\n  onResults("),
 )
 assert.equal(changeCameraSource.includes("this.waitingForReturn"), true, "復帰待ち中のカメラ切替後も復帰待ち表示を保つ")
+assert.equal(changeCameraSource.includes('error.name === "AbortError"'), true, "無効化されたカメラ切替は開始失敗として表示しない")
+
+const startVideoStreamSource = source.slice(
+  source.indexOf("async startVideoStream("),
+  source.indexOf("\n  async changeCamera("),
+)
+assert.equal(startVideoStreamSource.includes("await this.stopVideoStream({ cancelPendingStart: false })"), true, "旧MediaPipe処理の終了後に新しいカメラを開始する")
+assert.equal(startVideoStreamSource.includes("generation !== this.cameraStartGeneration"), true, "待機中に無効化されたカメラ開始処理を破棄する")
+assert.equal(startVideoStreamSource.includes("if (generation !== this.cameraStartGeneration) this.assertCameraStartCurrent(generation)"), true, "無効化後にgetUserMedia自体が失敗してもキャンセルとして扱う")
+assert.equal(startVideoStreamSource.includes("this.frameBuffer = []"), true, "カメラ切替後は旧カメラの解析値を捨てる")
+
+const stopVideoStreamSource = source.slice(
+  source.indexOf("async stopVideoStream("),
+  source.indexOf("\n  readCookie("),
+)
+assert.equal(stopVideoStreamSource.includes("frameLoop.stopAndDrain()"), true, "旧MediaPipe処理の完了を待てるように停止する")
+assert.equal(stopVideoStreamSource.includes("this.cameraStartGeneration += 1"), true, "終了時は待機中のカメラ開始を無効化する")
+assert.equal(stopVideoStreamSource.indexOf("track.stop()") < stopVideoStreamSource.indexOf("await drainPromise"), true, "MediaPipe完了待ちの前にカメラtrackを同期的に停止する")
 assert.equal(source.includes("isDebugModeEnabled()"), true, "URLパラメータでデバッグモードを判定する")
 assert.equal(source.includes("new URLSearchParams(window.location.search)"), true, "クエリ文字列からdebugパラメータを読む")
 assert.equal(source.includes("this.debugMode = this.isDebugModeEnabled()"), true, "接続時にデバッグモードを保持する")

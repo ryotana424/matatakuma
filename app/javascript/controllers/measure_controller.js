@@ -2,7 +2,8 @@ import { Controller } from "@hotwired/stimulus"
 import { LM, calcEAR, calcGazeOnScreen, calcHeadStable } from "focus/landmarks"
 import { computeMetrics, calcScore, classifyState, EAR_CLOSED_THRESH, isFaceTemporarilyAbsent } from "focus/score"
 import { aggregateSession, averageFocusableScore, focusVolume } from "focus/aggregate"
-import { faceAbsenceDeadlineMs, faceReturnState } from "focus/absence_timeout"
+import { faceAbsenceDeadlineMs, faceReturnState, isFrameFresh } from "focus/absence_timeout"
+import { MediaPipeFrameLoop } from "focus/media_pipe_frame_loop"
 import { SerialQueue } from "focus/serial_queue"
 
 const WINDOW_MS = 30000
@@ -43,6 +44,9 @@ export default class extends Controller {
     this.faceDetectedSinceMs = null
     this.lastReturnFrameAtMs = null
     this.autosaveTick = null
+    this.frameLoop = null
+    this.frameLoopDrainPromise = null
+    this.cameraStartGeneration = 0
     this.saveQueue = new SerialQueue()
     this.debugMode = this.isDebugModeEnabled()
     this.debugRows = {}
@@ -55,17 +59,23 @@ export default class extends Controller {
     // ウィンドウ幅・高さの変化でパルスチャートを描き直す（表示サイズ追従）
     this.onResize = () => this.drawScoreTrend()
     window.addEventListener("resize", this.onResize)
+    this.onVisibilityChange = () => {
+      if (this.frameLoop) this.frameLoop.setBackground(document.hidden)
+    }
+    document.addEventListener("visibilitychange", this.onVisibilityChange)
     this.start()
   }
 
   disconnect() {
     if (this.onResize) window.removeEventListener("resize", this.onResize)
+    if (this.onVisibilityChange) document.removeEventListener("visibilitychange", this.onVisibilityChange)
     this.shutdown()
   }
 
   async start() {
     if (this.running) return
 
+    const initialCameraGeneration = this.cameraStartGeneration
     try {
       this.faceMesh = new FaceMesh({
         locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`,
@@ -79,13 +89,16 @@ export default class extends Controller {
       this.faceMesh.onResults((results) => this.onResults(results))
 
       await this.populateCameraOptions()
-      await this.startVideoStream(this.selectedDeviceId)
+      this.assertCameraStartCurrent(initialCameraGeneration)
+      const cameraGeneration = await this.startVideoStream(this.selectedDeviceId)
       await this.populateCameraOptions()
+      this.assertCameraStartCurrent(cameraGeneration)
 
       this.running = true
       await this.beginSession()
       this.tick = setInterval(() => this.sampleOnce(), 1000)
     } catch (error) {
+      if (error.name === "AbortError") return
       this.messageTarget.textContent = `カメラを開始できません: ${error.message}`
       this.shutdown()
     }
@@ -118,28 +131,53 @@ export default class extends Controller {
   }
 
   async startVideoStream(deviceId = null) {
-    this.stopVideoStream()
+    const generation = ++this.cameraStartGeneration
+    await this.stopVideoStream({ cancelPendingStart: false })
+    this.assertCameraStartCurrent(generation)
 
     const video = deviceId
       ? { deviceId: { exact: deviceId }, width: { ideal: 640 }, height: { ideal: 480 } }
       : { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } }
 
-    const stream = await navigator.mediaDevices.getUserMedia({ video, audio: false })
-    this.videoTarget.srcObject = stream
-    await this.videoTarget.play()
+    let stream = null
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ video, audio: false })
+      this.assertCameraStartCurrent(generation)
+      this.videoTarget.srcObject = stream
+      await this.videoTarget.play()
+      this.assertCameraStartCurrent(generation)
 
-    const track = stream.getVideoTracks()[0]
-    this.selectedDeviceId = track?.getSettings?.().deviceId || deviceId
-    if (this.selectedDeviceId) this.writeCookie(CAMERA_DEVICE_COOKIE, this.selectedDeviceId, CAMERA_DEVICE_COOKIE_MAX_AGE)
+      const track = stream.getVideoTracks()[0]
+      this.selectedDeviceId = track?.getSettings?.().deviceId || deviceId
+      if (this.selectedDeviceId) this.writeCookie(CAMERA_DEVICE_COOKIE, this.selectedDeviceId, CAMERA_DEVICE_COOKIE_MAX_AGE)
 
-    this.camera = new Camera(this.videoTarget, {
-      onFrame: async () => {
-        await this.faceMesh.send({ image: this.videoTarget })
-      },
-      width: 640,
-      height: 480,
-    })
-    this.camera.start()
+      this.frameBuffer = []
+      this.frameLoop = new MediaPipeFrameLoop({
+        onFrame: async () => {
+          if (generation !== this.cameraStartGeneration) return
+          await this.faceMesh.send({ image: this.videoTarget })
+        },
+        onError: (error) => console.error("MediaPipe frame processing failed", error),
+      })
+      this.frameLoop.setBackground(document.hidden)
+      this.frameLoop.start()
+      return generation
+    } catch (error) {
+      if (stream) {
+        stream.getTracks().forEach((track) => track.stop())
+        if (this.videoTarget.srcObject === stream) this.videoTarget.srcObject = null
+      }
+      if (generation !== this.cameraStartGeneration) this.assertCameraStartCurrent(generation)
+      throw error
+    }
+  }
+
+  assertCameraStartCurrent(generation) {
+    if (generation === this.cameraStartGeneration) return
+
+    const error = new Error("Camera start cancelled")
+    error.name = "AbortError"
+    throw error
   }
 
   async changeCamera() {
@@ -158,6 +196,7 @@ export default class extends Controller {
         ? "離席によりセッションを区切りました。復帰すると自動で計測を再開します。"
         : "計測中です。映像は端末内でのみ解析されます。"
     } catch (error) {
+      if (error.name === "AbortError") return
       this.messageTarget.textContent = `カメラを切り替えられません: ${error.message}`
       await this.populateCameraOptions()
     }
@@ -187,6 +226,8 @@ export default class extends Controller {
     }
 
     const now = Date.now()
+    const latestFrame = this.frameBuffer[this.frameBuffer.length - 1]
+    if (!isFrameFresh(latestFrame, now)) this.frameBuffer = []
     if (this.waitingForReturn && !this.restarting && !this.restartFailed && !this.stopping) {
       const returnState = faceReturnState({
         faceDetected,
@@ -211,11 +252,13 @@ export default class extends Controller {
 
   sampleOnce() {
     if (this.waitingForReturn || this.restarting || this.stopping) return
-    if (this.endIfFaceAbsentTooLong()) return
+    const now = Date.now()
+    if (this.endIfFaceAbsentTooLong(now)) return
 
     this.updateDailyStatus()
 
-    if (isFaceTemporarilyAbsent(this.frameBuffer)) {
+    const latestFrame = this.frameBuffer[this.frameBuffer.length - 1]
+    if (!isFrameFresh(latestFrame, now) || isFaceTemporarilyAbsent(this.frameBuffer)) {
       this.scoreTarget.textContent = "—"
       this.scoreTarget.dataset.state = "interrupted"
       this.stateTarget.textContent = this.stateLabel("interrupted")
@@ -235,7 +278,6 @@ export default class extends Controller {
     this.samples.push({ score, state, metrics })
     this.updateSessionAverage()
     // 記録時刻つきで保持し、グラフは実時間で描く（離席で途切れた区間も正しく空く）
-    const now = Date.now()
     this.scoreHistory.push({ t: now, score })
     // 直近30分より古いサンプルは捨てる（安全のため件数上限も併用）
     while (
@@ -598,19 +640,30 @@ export default class extends Controller {
     this.tick = null
     if (this.autosaveTick) clearInterval(this.autosaveTick)
     this.autosaveTick = null
-    this.stopVideoStream()
+    void this.stopVideoStream()
     if (this.hasStopBtnTarget) this.stopBtnTarget.disabled = true
     if (this.hasPlaceholderTarget) this.placeholderTarget.hidden = false
     if (this.hasCameraSelectTarget) this.cameraSelectTarget.disabled = true
   }
 
-  stopVideoStream() {
-    if (this.camera) this.camera.stop()
-    this.camera = null
-    if (this.videoTarget.srcObject) {
-      this.videoTarget.srcObject.getTracks().forEach((track) => track.stop())
+  async stopVideoStream({ cancelPendingStart = true } = {}) {
+    if (cancelPendingStart) this.cameraStartGeneration += 1
+
+    const frameLoop = this.frameLoop
+    this.frameLoop = null
+    const previousDrainPromise = this.frameLoopDrainPromise || Promise.resolve()
+    const currentDrainPromise = frameLoop ? frameLoop.stopAndDrain() : Promise.resolve()
+    const drainPromise = Promise.all([previousDrainPromise, currentDrainPromise])
+    this.frameLoopDrainPromise = drainPromise
+
+    const stream = this.videoTarget.srcObject
+    if (stream) {
+      stream.getTracks().forEach((track) => track.stop())
       this.videoTarget.srcObject = null
     }
+
+    await drainPromise
+    if (this.frameLoopDrainPromise === drainPromise) this.frameLoopDrainPromise = null
   }
 
   readCookie(name) {

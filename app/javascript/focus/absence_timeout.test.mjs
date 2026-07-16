@@ -5,6 +5,7 @@ import {
   FRAME_STALE_AFTER_MS,
   faceAbsenceDeadlineMs,
   faceReturnState,
+  isFrameFresh,
 } from "./absence_timeout.js"
 
 const startedAt = Date.parse("2026-07-09T14:00:00Z")
@@ -95,5 +96,19 @@ assert.deepEqual(
   { faceDetectedSinceMs: returnStartedAt + FRAME_STALE_AFTER_MS, confirmed: false },
   "カメラフレームが長く止まった後は復帰確認を最初からやり直す",
 )
+
+assert.equal(
+  isFrameFresh({ ts: now - FRAME_STALE_AFTER_MS + 1 }, now),
+  true,
+  "5秒未満のフレームはスコア計算に利用できる",
+)
+
+assert.equal(
+  isFrameFresh({ ts: now - FRAME_STALE_AFTER_MS }, now),
+  false,
+  "5秒以上更新されていないフレームはスコア計算に再利用しない",
+)
+
+assert.equal(isFrameFresh(null, now), false, "フレーム未取得時はスコア計算しない")
 
 console.log("absence timeout OK")
