@@ -36,6 +36,10 @@
           %span 計測終了して保存
 
     %aside.panel.measure-score{ "aria-label": "集中度スコア" }
+      .measure-mini
+        %span.measure-mini__label{ data: { measure_target: "miniStatus" } } 計測中
+        %strong.measure-mini__task= @task.name
+
       %h2.measure-score__title 現在の集中度
 
       .measure-score__top
@@ -76,6 +80,16 @@
                 %strong.measure-stats__num
                   %span{ data: { measure_target: "dailyAverage" } }= daily_summary[:avg_score] || "—"
                   %span.measure-stats__unit / 100
+
+      .measure-mini__metrics
+        .measure-mini__metric
+          %span.measure-mini__metric-label 経過
+          %strong.measure-mini__metric-value{ data: { measure_target: "sessionElapsed" } } 0:00:00
+        .measure-mini__metric
+          %span.measure-mini__metric-label セッション平均
+          %strong.measure-mini__metric-value
+            %span{ data: { measure_target: "miniSessionAverage" } } —
+            %span.measure-mini__metric-unit / 100
 
       .measure-pulse{ "aria-label": "スコア推移" }
         .measure-pulse__head

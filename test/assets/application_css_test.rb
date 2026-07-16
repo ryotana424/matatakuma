@@ -22,7 +22,7 @@ class ApplicationCssTest < ActiveSupport::TestCase
     assert_match(/\.measure-pulse__plot\s*\{[^}]*flex:\s*1/m, css)
   end
 
-  test "幅520px以下の計測画面は現在の集中度だけを表示する" do
+  test "幅520px以下の計測画面はタスク名とセッション指標を横長に表示する" do
     css = Rails.root.join("app/assets/stylesheets/application.css").read
     mini_mode = css.match(/@media \(max-width:\s*520px\)\s*\{(?<rules>.*)\}\s*\z/m)
 
@@ -38,7 +38,13 @@ class ApplicationCssTest < ActiveSupport::TestCase
     assert_match(/#{measure_page}\s+\.measure-stats[^\{]*\{[^}]*display:\s*none/m, rules)
     assert_match(/#{measure_page}\s+\.measure-pulse[^\{]*\{[^}]*display:\s*none/m, rules)
     assert_match(/#{measure_page}\s+\.measure-debug[^\{]*\{[^}]*display:\s*none/m, rules)
-    assert_match(/#{measure_page}\s+\.measure-score__headline\s*\{[^}]*align-items:\s*center/m, rules)
+    assert_match(/#{measure_page}\s+\.measure-mini\s*\{[^}]*display:\s*grid/m, rules)
+    assert_match(/#{measure_page}\s+\.measure-score\s*\{[^}]*grid-template-areas:\s*"task task"\s*"title metrics"\s*"score metrics"/m, rules)
+    assert_match(/#{measure_page}\s+\.measure-score\s*\{[^}]*height:\s*min\([^;]*100dvh\s*-\s*24px/m, rules)
+    assert_match(/#{measure_page}\s+\.measure-score__title\s*\{[^}]*grid-area:\s*title/m, rules)
+    assert_match(/#{measure_page}\s+\.measure-score__headline\s*\{[^}]*grid-area:\s*score/m, rules)
+    assert_match(/#{measure_page}\s+\.measure-mini__metrics\s*\{[^}]*grid-area:\s*metrics/m, rules)
     assert_match(/#{measure_page}\s+\.measure-score__value-row\s*\{[^}]*justify-content:\s*center/m, rules)
+    assert_match(/#{measure_page}\s+\.measure-score__value\s*\{[^}]*font-size:\s*clamp\(54px,\s*min\(18vw,\s*28vh\),\s*80px\)/m, rules)
   end
 end

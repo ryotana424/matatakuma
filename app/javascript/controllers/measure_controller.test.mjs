@@ -8,7 +8,7 @@ const source = readFileSync(join(currentDir, "measure_controller.js"), "utf8")
 
 assert.equal(source.includes(".drawImage("), false, "カメラ映像をcanvasへ描画しない")
 assert.equal(source.includes("drawPrivacySurface"), true, "匿名化された表示面を描画する")
-assert.equal(source.includes("static targets = [\"video\", \"canvas\", \"score\", \"state\", \"stopBtn\", \"placeholder\", \"message\", \"cameraSelect\", \"pulseCanvas\", \"blinkCount\", \"sessionAverage\", \"interventionSelect\", \"dailyDuration\", \"dailyFocusVolume\", \"dailyAverage\"]"), true, "カメラ選択・波形canvas・平均スコア・施策選択・日次ステータスのtargetを持つ")
+assert.equal(source.includes("static targets = [\"video\", \"canvas\", \"score\", \"state\", \"stopBtn\", \"placeholder\", \"message\", \"cameraSelect\", \"pulseCanvas\", \"blinkCount\", \"sessionAverage\", \"miniSessionAverage\", \"sessionElapsed\", \"miniStatus\", \"interventionSelect\", \"dailyDuration\", \"dailyFocusVolume\", \"dailyAverage\"]"), true, "カメラ選択・波形canvas・セッション指標・ミニ表示状態・施策選択・日次ステータスのtargetを持つ")
 assert.equal(source.includes("this.start()"), true, "画面表示時に自動で計測開始する")
 assert.equal(source.includes("enumerateDevices()"), true, "利用可能なカメラを列挙する")
 assert.equal(source.includes("deviceId: { exact: deviceId }"), true, "選択したカメラIDで起動する")
@@ -24,6 +24,8 @@ assert.equal(source.includes("\"sessionAverage\""), true, "このセッション
 assert.equal(source.includes("updateSessionAverage()"), true, "サンプル追加時にこのセッション平均を更新する")
 assert.equal(source.includes("averageFocusableScore"), true, "このセッション平均は離席サンプルを除いて計算する")
 assert.equal(source.includes("this.sessionAverageTarget.textContent = average"), true, "このセッション平均を画面へ表示する")
+assert.equal(source.includes("this.miniSessionAverageTarget.textContent = average"), true, "ミニ表示にもこのセッション平均を表示する")
+assert.equal(source.includes("this.sessionElapsedTarget.textContent = this.formatDuration(elapsedSec)"), true, "ミニ表示の経過時間を毎秒更新する")
 assert.equal(source.includes("CAMERA_DEVICE_COOKIE"), true, "前回選択したカメラを保存するCookie名を持つ")
 assert.equal(source.includes("readCookie(CAMERA_DEVICE_COOKIE)"), true, "起動時に前回のカメラIDをCookieから読む")
 assert.equal(source.includes("writeCookie(CAMERA_DEVICE_COOKIE, this.selectedDeviceId"), true, "起動・切替後に選択したカメラIDをCookieへ保存する")
@@ -70,6 +72,13 @@ assert.equal(source.includes("resetSessionMeasurements()"), true, "自動再開�
 assert.equal(source.includes("delete this.scoreTarget.dataset.state"), true, "自動再開時に前セッションのスコア表示状態を消す")
 assert.equal(source.includes("delete this.stateTarget.dataset.state"), true, "自動再開時に前セッションの状態表示を消す")
 
+const resetSessionMeasurementsSource = source.slice(
+  source.indexOf("resetSessionMeasurements("),
+  source.indexOf("\n  async beginSession("),
+)
+assert.equal(resetSessionMeasurementsSource.includes("this.miniStatusTarget.textContent = \"計測中\""), true, "新しいセッション開始時はミニ表示を計測中へ戻す")
+assert.equal(resetSessionMeasurementsSource.includes("this.sessionElapsedTarget.textContent = \"0:00:00\""), true, "新しいセッション開始時は経過時間をリセットする")
+
 const stopForAbsenceSource = source.slice(
   source.indexOf("async stopForAbsence("),
   source.indexOf("\n  shutdown()"),
@@ -77,6 +86,9 @@ const stopForAbsenceSource = source.slice(
 assert.equal(stopForAbsenceSource.includes("window.location.href"), false, "離席終了後はタスク一覧へ移動しない")
 assert.equal(stopForAbsenceSource.includes("this.stopVideoStream()"), false, "離席終了後も復帰検出用のカメラを止めない")
 assert.equal(stopForAbsenceSource.includes("catch"), true, "離席終了の通信エラー時も失敗状態へ移れる")
+assert.equal(stopForAbsenceSource.includes("this.miniStatusTarget.textContent = \"復帰待ち\""), true, "離席終了後のミニ表示は復帰待ちを示す")
+assert.equal(stopForAbsenceSource.includes("this.sessionElapsedTarget.textContent = \"--\""), true, "離席終了後のミニ表示は古い経過時間を残さない")
+assert.equal(stopForAbsenceSource.includes("this.miniSessionAverageTarget.textContent = \"--\""), true, "離席終了後のミニ表示は古い平均を残さない")
 
 assert.equal(source.includes("payload.intervention_id = this.selectedInterventionId()"), true, "定期保存と終了保存で選択中の施策IDを送る")
 assert.equal(source.includes("return value === \"\" ? null : Number(value)"), true, "施策未選択はnullとして送り紐付けを外せる")

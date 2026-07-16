@@ -1092,6 +1092,12 @@ button, select, textarea, input { font-family: inherit; }
   min-height: 0;
 }
 
+/* 狭幅ミニモード専用。通常表示ではDOMだけ保持して隠す */
+.measure-mini,
+.measure-mini__metrics {
+  display: none;
+}
+
 /* 上段: 左に大スコア＋状態、右に統計グリッド */
 .measure-score__top {
   display: flex;
@@ -2262,25 +2268,95 @@ button, select, textarea, input { font-family: inherit; }
   }
 
   .fp-page[data-controller~="measure"] .measure-score {
+    box-sizing: border-box;
     width: 100%;
-    padding: 24px 16px;
-    gap: 12px;
+    height: min(calc((100vw - 24px) * 460 / 972), calc(100dvh - 24px));
+    padding: clamp(10px, 3vh, 16px) 16px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(132px, 0.62fr);
+    grid-template-areas:
+      "task task"
+      "title metrics"
+      "score metrics";
+    gap: clamp(2px, 1vh, 8px) 28px;
     align-items: center;
   }
 
+  .fp-page[data-controller~="measure"] .measure-mini {
+    grid-area: task;
+    min-width: 0;
+    display: grid;
+    justify-items: center;
+    gap: 3px;
+    margin-bottom: 4px;
+  }
+
+  .fp-page[data-controller~="measure"] .measure-mini__label {
+    color: var(--color-ink-3);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+  }
+
+  .fp-page[data-controller~="measure"] .measure-mini__task {
+    max-width: 100%;
+    overflow: hidden;
+    color: var(--color-ink);
+    font-size: 14px;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
   .fp-page[data-controller~="measure"] .measure-score__title {
+    grid-area: title;
     text-align: center;
   }
 
   .fp-page[data-controller~="measure"] .measure-score__top {
-    display: block;
+    display: contents;
     padding: 0;
   }
 
   .fp-page[data-controller~="measure"] .measure-score__headline {
+    grid-area: score;
     width: auto;
-    gap: 12px;
+    gap: clamp(4px, 1.5vh, 12px);
     align-items: center;
+  }
+
+  .fp-page[data-controller~="measure"] .measure-mini__metrics {
+    grid-area: metrics;
+    align-self: stretch;
+    display: grid;
+    align-content: center;
+    gap: clamp(6px, 2vh, 14px);
+    border-left: 1px solid var(--color-border);
+    padding-left: 24px;
+  }
+
+  .fp-page[data-controller~="measure"] .measure-mini__metric {
+    display: grid;
+    gap: 2px;
+  }
+
+  .fp-page[data-controller~="measure"] .measure-mini__metric-label {
+    color: var(--color-ink-2);
+    font-size: 11px;
+  }
+
+  .fp-page[data-controller~="measure"] .measure-mini__metric-value {
+    color: var(--color-ink);
+    font-family: var(--font-mono);
+    font-size: 18px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .fp-page[data-controller~="measure"] .measure-mini__metric-unit {
+    color: var(--color-ink-3);
+    font-size: 11px;
+    font-weight: 400;
   }
 
   .fp-page[data-controller~="measure"] .measure-score__value-row {
@@ -2288,6 +2364,6 @@ button, select, textarea, input { font-family: inherit; }
   }
 
   .fp-page[data-controller~="measure"] .measure-score__value {
-    font-size: clamp(64px, 28vw, 96px);
+    font-size: clamp(54px, min(18vw, 28vh), 80px);
   }
 }

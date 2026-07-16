@@ -17,7 +17,7 @@ const CAMERA_DEVICE_COOKIE_MAX_AGE = 60 * 60 * 24 * 180
 
 // 映像解析はブラウザ内で完結し、終了時に集計値だけをPOSTする。
 export default class extends Controller {
-  static targets = ["video", "canvas", "score", "state", "stopBtn", "placeholder", "message", "cameraSelect", "pulseCanvas", "blinkCount", "sessionAverage", "interventionSelect", "dailyDuration", "dailyFocusVolume", "dailyAverage"]
+  static targets = ["video", "canvas", "score", "state", "stopBtn", "placeholder", "message", "cameraSelect", "pulseCanvas", "blinkCount", "sessionAverage", "miniSessionAverage", "sessionElapsed", "miniStatus", "interventionSelect", "dailyDuration", "dailyFocusVolume", "dailyAverage"]
   static values = {
     taskId: Number,
     createUrl: String,
@@ -287,23 +287,28 @@ export default class extends Controller {
   }
 
   updateSessionAverage() {
-    if (!this.hasSessionAverageTarget) return
+    if (!this.hasSessionAverageTarget && !this.hasMiniSessionAverageTarget) return
 
     if (this.samples.length === 0) {
-      this.sessionAverageTarget.textContent = "--"
+      if (this.hasSessionAverageTarget) this.sessionAverageTarget.textContent = "--"
+      if (this.hasMiniSessionAverageTarget) this.miniSessionAverageTarget.textContent = "--"
       return
     }
 
     const average = averageFocusableScore(this.samples)
-    this.sessionAverageTarget.textContent = average
+    if (this.hasSessionAverageTarget) this.sessionAverageTarget.textContent = average
+    if (this.hasMiniSessionAverageTarget) this.miniSessionAverageTarget.textContent = average
   }
 
   // 本日ステータスバーを「保存済みセッションの集計＋計測中セッションの見込み値」で更新する。
   // 計測中セッションは、離席を除いた1秒ごとのスコア累計から算出する
   updateDailyStatus() {
-    if (!this.hasDailyDurationTarget || !this.startedAt) return
+    if (!this.startedAt) return
 
     const elapsedSec = Math.max(0, Math.floor((Date.now() - this.startedAt.getTime()) / 1000))
+    if (this.hasSessionElapsedTarget) this.sessionElapsedTarget.textContent = this.formatDuration(elapsedSec)
+    if (!this.hasDailyDurationTarget) return
+
     const currentAvg = this.samples.length > 0 ? averageFocusableScore(this.samples) : null
 
     this.dailyDurationTarget.textContent = this.formatDuration(this.dailyBaseDurationSecValue + elapsedSec)
@@ -449,6 +454,8 @@ export default class extends Controller {
     this.lastReturnFrameAtMs = null
     this.updateBlinkCount()
     this.updateSessionAverage()
+    this.miniStatusTarget.textContent = "計測中"
+    this.sessionElapsedTarget.textContent = "0:00:00"
     this.scoreTarget.textContent = "—"
     delete this.scoreTarget.dataset.state
     this.stateTarget.textContent = "待機中"
@@ -554,6 +561,7 @@ export default class extends Controller {
     if (this.autosaveTick) clearInterval(this.autosaveTick)
     this.autosaveTick = null
     this.messageTarget.textContent = "離席が30分続いたため、セッションを終了しています..."
+    this.miniStatusTarget.textContent = "終了処理中"
 
     let saved = false
     try {
@@ -572,10 +580,14 @@ export default class extends Controller {
       delete this.scoreTarget.dataset.state
       this.stateTarget.textContent = "復帰待ち"
       delete this.stateTarget.dataset.state
+      this.miniStatusTarget.textContent = "復帰待ち"
+      this.sessionElapsedTarget.textContent = "--"
+      this.miniSessionAverageTarget.textContent = "--"
       this.messageTarget.textContent = "離席によりセッションを区切りました。復帰すると自動で計測を再開します。"
     } else {
       this.waitingForReturn = false
       this.shutdown()
+      this.miniStatusTarget.textContent = "終了失敗"
       this.messageTarget.textContent = "セッションの自動終了に失敗しました。ページを再読み込みしてください。"
     }
   }

@@ -116,6 +116,9 @@ class TasksControllerTest < ActionDispatch::IntegrationTest
     get measure_task_url(task)
     assert_response :success
     assert_select ".measure-camera__task", "計測タスク"
+    assert_select ".measure-mini__task", "計測タスク"
+    assert_select "[data-measure-target='sessionElapsed']", "0:00:00"
+    assert_select "[data-measure-target='miniSessionAverage']", "—"
     assert_select "body", { text: /計測中: 計測タスク/, count: 0 }
     assert_select "button", /計測終了して保存/
     # 計測開始は他タスク行にはあり得るが、リンク（a要素）であってbuttonではない
