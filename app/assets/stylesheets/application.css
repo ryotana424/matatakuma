@@ -1986,8 +1986,33 @@ button, select, textarea, input { font-family: inherit; }
 }
 
 /* =========================================================
-   計測方法（About）: フロー番号・式・指標行
+   計測方法（About）: 冒頭詩・フロー番号・式・指標行
    ========================================================= */
+/* 冒頭詩ヒーロー: アクセントの淡い地に載せてページの顔にする */
+.about-poem {
+  text-align: center;
+  padding: calc(var(--space-5) * 1.4) var(--space-4);
+  background: var(--color-accent-soft);
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius-m);
+  line-height: 2.2;
+  letter-spacing: 0.14em;
+}
+.about-poem__line {
+  margin: 0;
+  color: var(--color-ink);
+  font-size: 15px;
+}
+.about-poem__line--closing {
+  color: var(--color-accent);
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+}
+/* 通常行から締め2行への切り替わりにだけ余白を入れる */
+.about-poem__line:not(.about-poem__line--closing) + .about-poem__line--closing {
+  margin-top: 14px;
+}
 .flow-steps { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; }
 .flow-step {
   display: grid;

@@ -1,19 +1,30 @@
-- content_for(:title) { "計測方法 | Matatakuma" }
+- content_for(:title) { "About | Matatakuma" }
 - content_for(:header) { render "tasks/page_header", current: :about }
 
 = turbo_frame_tag "modal" do
   .about-page{ style: "display:flex;flex-direction:column;gap:var(--space-5)" }
+    -# 冒頭詩（雨ニモマケズのパロディ）: ページの顔として最上部に置くヒーローブロック
+    .about-poem
+      - poem = ["雨ニモマケズ", "通知ニモマケズ", "SlackニモX（旧Twitter）ノ誘惑ニモマケヌ", "丈夫ナ没頭ヲモチ", "慾ハナク 決シテスマホヲ見ズ", "脇目モ振ラズ", "イツモシヅカニ画面ヲ見テヰル"]
+      - poem.each do |line|
+        %p.about-poem__line= line
+      %p.about-poem__line.about-poem__line--closing サウイフ集中ニ
+      %p.about-poem__line.about-poem__line--closing ワタシハナリタイ
+
     .page-head
-      %h1.ds-page-title 計測方法
+      %h1.ds-page-title About
       %p.page-lead
         Matatakuma は、Webカメラの映像から顔と目の動きを解析し、集中の状態を 0〜100 のスコアとして1秒ごとに記録します。
         このページでは、計測の流れとスコアの計算方法、プライバシーの扱いを説明します。
 
-    -# 冒頭詩（雨ニモマケズのパロディ）
-    .about-poem{ style: "text-align:center;padding:var(--space-5) var(--space-4);color:var(--color-ink-2);line-height:2.1;letter-spacing:0.08em" }
-      - poem = ["雨ニモマケズ", "通知ニモマケズ", "SlackニモX（旧Twitter）ノ誘惑ニモマケヌ", "丈夫ナ没頭ヲモチ", "慾ハナク 決シテスマホヲ見ズ", "脇目モ振ラズ", "イツモシヅカニ画面ヲ見テヰル", "サウイフ集中ニ", "ワタシハナリタイ"]
-      - poem.each do |line|
-        %p{ style: "margin:0" }= line
+    -# 名前の由来
+    %section.ds-panel
+      .ds-panel__head
+        %h2.ds-panel__title 名前の由来
+      %p{ style: "margin:0;color:var(--color-ink-2)" }
+        Matatakuma（マタタクマ）は「瞬く間（またたくま）」から。
+        集中していると、時間は瞬く間に過ぎていきます。
+        そしてその集中を、このアプリは「瞬き」を含む目の動きの計測で捉えます。
 
     -# 計測の流れ
     %section.ds-panel
