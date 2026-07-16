@@ -5,8 +5,8 @@ class TasksControllerTest < ActionDispatch::IntegrationTest
     Task.create!(name: "資料作成")
     get tasks_url
     assert_response :success
-    assert_select "title", /Focus Pulse/
-    assert_select ".fp-brand__name", "Focus Pulse"
+    assert_select "title", /Matatakuma/
+    assert_select ".fp-brand__name", "Matatakuma"
     assert_select "body", /資料作成/
   end
 

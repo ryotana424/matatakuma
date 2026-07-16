@@ -13,7 +13,7 @@ const TREND_WINDOW_MS = 30 * 60 * 1000
 const TREND_GAP_MS = 5000
 // メモリ上限（1秒1点で30分ぶん + 余裕）。実際の可視範囲は t で判定する
 const SCORE_HISTORY_MAX_POINTS = 30 * 60 + 60
-const CAMERA_DEVICE_COOKIE = "focus_pulse_camera_device_id"
+const CAMERA_DEVICE_COOKIE = "matatakuma_camera_device_id"
 const CAMERA_DEVICE_COOKIE_MAX_AGE = 60 * 60 * 24 * 180
 
 // 映像解析はブラウザ内で完結し、終了時に集計値だけをPOSTする。
