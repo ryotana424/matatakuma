@@ -26,6 +26,17 @@ assert.equal(s._map.get(STORAGE_KEYS.step), "3")
 s._map.set(STORAGE_KEYS.step, "abc")
 assert.equal(readStep(s), null, "数値化できない保存値は null")
 
+// 空文字・空白・負数・小数・16進は不正値として null（Number("")===0 の罠を避ける）
+for (const bad of ["", "  ", "-1", "3.5", "0x3", "abc"]) {
+  s._map.set(STORAGE_KEYS.step, bad)
+  assert.equal(readStep(s), null, `不正値 ${JSON.stringify(bad)} は null`)
+}
+// 正当な非負整数は読める
+s._map.set(STORAGE_KEYS.step, "0")
+assert.equal(readStep(s), 0, "0は正当なステップ")
+s._map.set(STORAGE_KEYS.step, "7")
+assert.equal(readStep(s), 7)
+
 // 完了フラグ
 s = makeStorage()
 markDone(s)

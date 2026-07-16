@@ -6,13 +6,15 @@ export const STORAGE_KEYS = {
   done: "matatakuma_onboarding_done", // 完了/スキップ済みフラグ
 }
 
-// 現在の保存ステップ番号を返す。未保存・不正値は null。
+// 現在の保存ステップ番号を返す。未保存・不正値（空文字/非整数/負数）は null。
 export function readStep(storage) {
   try {
     const raw = storage.getItem(STORAGE_KEYS.step)
     if (raw == null) return null
-    const n = Number(raw)
-    return Number.isInteger(n) ? n : null
+    const trimmed = String(raw).trim()
+    // 非負整数の表記だけを受け付ける（"", " ", "3.5", "-1", "0x3", "abc" は弾く）
+    if (!/^\d+$/.test(trimmed)) return null
+    return Number(trimmed)
   } catch {
     return null
   }
