@@ -19,6 +19,9 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     # プライバシー
     assert_select ".privacy-list li", 4
     assert_select "body", /ブラウザ内だけで処理されます/
+    # 使い方ガイド（オンボーディング再生ボタン）
+    assert_select "[data-controller='restart-onboarding']"
+    assert_select "button[data-action='restart-onboarding#restart']", /オンボーディングをもう一度受ける/
     # 旧デザインの残骸がないこと
     assert_select ".metric-thumb", count: 0
     assert_select ".about-panel", count: 0
