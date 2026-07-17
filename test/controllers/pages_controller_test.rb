@@ -9,6 +9,9 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     # 計測の流れ（番号付きステップ）
     assert_select ".flow-step", 4
     assert_select "body", /タスクを選んで計測開始/
+    # カメラ位置の案内
+    assert_select "body", /カメラは画面上部中央/
+    assert_select "body", /横や下にずれていると/
     # スコアの計算（式・指標行）
     assert_select ".formula-box"
     assert_select ".metric-row", 5

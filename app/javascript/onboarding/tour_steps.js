@@ -40,7 +40,7 @@ export const STEPS = [
   },
   {
     id: 4, screen: SCREENS.MEASURE, target: null, advance: ADVANCE.CAMERA_START,
-    body: "ブラウザ上部にカメラの許可を求める表示が出ます。「許可」を選んでください。映像は端末内だけで処理され、サーバーには送られません。",
+    body: "ブラウザ上部にカメラの許可を求める表示が出ます。「許可」を選んでください。カメラは画面上部中央など、顔の正面かつ目線に近い高さがおすすめです。映像は端末内だけで処理され、サーバーには送られません。",
   },
   {
     id: 5, screen: SCREENS.MEASURE, target: ".measure-score", advance: ADVANCE.TIMER,

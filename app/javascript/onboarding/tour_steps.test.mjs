@@ -29,6 +29,8 @@ assert.equal(resolveVisibleStep(1, SCREENS.MEASURE), null, "画面不一致な�
 assert.equal(resolveVisibleStep(4, SCREENS.MEASURE)?.id, 4)
 assert.equal(resolveVisibleStep(5, SCREENS.MEASURE)?.id, 5)
 assert.equal(resolveVisibleStep(6, SCREENS.MEASURE)?.id, 6)
+assert.match(stepById(4).body, /画面上部中央/, "カメラ許可時に推奨位置を案内する")
+assert.match(stepById(4).body, /目線/, "カメラ許可時に推奨する高さを案内する")
 // 締めのステップは一覧画面で表示
 assert.equal(resolveVisibleStep(7, SCREENS.TASK_LIST)?.id, 7, "step7は一覧で表示")
 assert.equal(resolveVisibleStep(7, SCREENS.MEASURE), null)
