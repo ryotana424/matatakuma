@@ -2,7 +2,7 @@
 
 タスクごとの集中力をWebカメラで計測し、日次で振り返るローカル専用アプリ。映像解析はすべてブラウザ内（MediaPipe）で完結し、映像・画像・ランドマーク座標はサーバに送信・保存しません。
 
-![計測画面](docs/images/measure-screen.png)
+![計測画面](.github/images/measure-screen.png)
 
 ## 特徴
 
