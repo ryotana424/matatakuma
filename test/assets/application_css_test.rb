@@ -1,6 +1,22 @@
 require "test_helper"
 
 class ApplicationCssTest < ActiveSupport::TestCase
+  test "計測終了は停止アイコンで再開は再生アイコンになる" do
+    css = Rails.root.join("app/assets/stylesheets/application.css").read
+
+    assert_match(/\.btn--finish__icon\s*\{[^}]*border-radius:\s*3px[^}]*background:\s*currentColor/m, css)
+    assert_match(/\.task-btn__stop-icon\s*\{[^}]*background:\s*currentColor/m, css)
+    assert_match(/\.btn--resume\s*\{[^}]*display:\s*inline-flex[^}]*align-items:\s*center[^}]*justify-content:\s*center/m, css)
+    assert_match(/\.btn--resume__icon\s*\{[^}]*display:\s*block[^}]*width:\s*14px[^}]*height:\s*16px[^}]*clip-path:\s*polygon\(0 0,\s*100% 50%,\s*0 100%\)/m, css)
+  end
+
+  test "計測アクションの非表示ボタンはレイアウトに残らない" do
+    css = Rails.root.join("app/assets/stylesheets/application.css").read
+
+    assert_match(/\.measure-actions\s+\[hidden\]\s*\{[^}]*display:\s*none/m, css)
+    assert_match(/\.task-grid__ops\s+\[hidden\]\s*\{[^}]*display:\s*none/m, css)
+  end
+
   test "非表示にしたタスク行はグリッド指定より優先して隠す" do
     css = Rails.root.join("app/assets/stylesheets/application.css").read
 

@@ -18,7 +18,7 @@ const CAMERA_DEVICE_COOKIE_MAX_AGE = 60 * 60 * 24 * 180
 
 // 映像解析はブラウザ内で完結し、終了時に集計値だけをPOSTする。
 export default class extends Controller {
-  static targets = ["video", "canvas", "score", "state", "stopBtn", "placeholder", "message", "cameraSelect", "pulseCanvas", "blinkCount", "sessionAverage", "miniSessionAverage", "sessionElapsed", "miniStatus", "interventionSelect", "dailyDuration", "dailyFocusVolume", "dailyAverage"]
+  static targets = ["video", "canvas", "score", "state", "stopBtn", "resumeBtn", "placeholder", "message", "cameraSelect", "pulseCanvas", "blinkCount", "sessionAverage", "miniSessionAverage", "sessionElapsed", "miniStatus", "interventionSelect", "dailyDuration", "dailyFocusVolume", "dailyAverage", "taskMeasurementStatus", "taskStopBtn", "taskResumeBtn"]
   static values = {
     taskId: Number,
     createUrl: String,
@@ -513,6 +513,14 @@ export default class extends Controller {
     this.restartFailed = false
     this.stopping = false
     this.stopBtnTarget.disabled = false
+    this.stopBtnTarget.hidden = false
+    this.resumeBtnTarget.hidden = true
+    this.resumeBtnTarget.disabled = false
+    this.taskMeasurementStatusTarget.textContent = "計測中"
+    this.taskStopBtnTarget.hidden = false
+    this.taskStopBtnTarget.disabled = false
+    this.taskResumeBtnTarget.hidden = true
+    this.taskResumeBtnTarget.disabled = false
     this.placeholderTarget.hidden = true
     this.messageTarget.textContent = "計測中です。映像は端末内でのみ解析されます。"
     this.autosaveTick = setInterval(() => this.saveProgress(), 15000)
@@ -574,24 +582,70 @@ export default class extends Controller {
   async stop() {
     if (this.stopping || this.restarting) return
 
-    if (!this.startedAt) {
-      this.stopping = true
-      this.shutdown()
-      window.location.href = "/tasks"
-      return
-    }
+    if (!this.startedAt || !this.sessionId) return
 
     this.stopping = true
     this.shutdown()
     this.stopBtnTarget.disabled = true
     this.messageTarget.textContent = "保存中です..."
 
-    const saved = await this.saveProgress({ completed: true })
+    const endedAt = new Date()
+    let saved = false
+    try {
+      saved = await this.saveProgress({ completed: true, endedAt })
+    } catch {
+      saved = false
+    }
 
     if (saved) {
-      window.location.href = "/tasks"
+      this.updateDailyStatus()
+      this.commitCurrentSessionToDailyBase(endedAt)
+      this.sessionId = null
+      this.startedAt = null
+      this.showStoppedState()
     } else {
+      this.stopping = false
+      this.stopBtnTarget.disabled = false
       this.messageTarget.textContent = "保存に失敗しました。ページを再読み込みしてもう一度試してください。"
+    }
+  }
+
+  commitCurrentSessionToDailyBase(endedAt) {
+    if (!this.startedAt) return
+
+    const summary = aggregateSession(this.samples, this.startedAt, endedAt)
+    this.dailyBaseDurationSecValue += summary.duration_sec
+    this.dailyBaseVolumeValue += summary.focus_volume
+    this.dailyBaseScoreSumValue += summary.avg_score
+    this.dailyBaseSessionCountValue += 1
+  }
+
+  showStoppedState() {
+    this.stopping = false
+    this.stopBtnTarget.hidden = true
+    this.resumeBtnTarget.hidden = false
+    this.resumeBtnTarget.disabled = false
+    this.taskMeasurementStatusTarget.textContent = "計測終了"
+    this.taskStopBtnTarget.hidden = true
+    this.taskResumeBtnTarget.hidden = false
+    this.taskResumeBtnTarget.disabled = false
+    this.miniStatusTarget.textContent = "計測終了"
+    this.messageTarget.textContent = "保存しました。再開すると新しいセッションとして計測を続けられます。"
+  }
+
+  async resume() {
+    if (this.running || this.stopping || this.restarting) return
+
+    this.resumeBtnTarget.disabled = true
+    this.taskResumeBtnTarget.disabled = true
+    this.messageTarget.textContent = "計測を再開しています..."
+    await this.start()
+
+    if (!this.running) {
+      this.resumeBtnTarget.hidden = false
+      this.resumeBtnTarget.disabled = false
+      this.taskResumeBtnTarget.hidden = false
+      this.taskResumeBtnTarget.disabled = false
     }
   }
 
@@ -600,6 +654,7 @@ export default class extends Controller {
 
     this.stopping = true
     this.waitingForReturn = true
+    this.taskStopBtnTarget.disabled = true
     if (this.autosaveTick) clearInterval(this.autosaveTick)
     this.autosaveTick = null
     this.messageTarget.textContent = "離席が30分続いたため、セッションを終了しています..."
@@ -612,6 +667,8 @@ export default class extends Controller {
       saved = false
     }
     if (saved) {
+      this.updateDailyStatus()
+      this.commitCurrentSessionToDailyBase(endedAt)
       this.sessionId = null
       this.startedAt = null
       this.stopping = false
@@ -642,6 +699,8 @@ export default class extends Controller {
     this.autosaveTick = null
     void this.stopVideoStream()
     if (this.hasStopBtnTarget) this.stopBtnTarget.disabled = true
+    if (this.hasTaskStopBtnTarget) this.taskStopBtnTarget.disabled = true
+    if (this.hasTaskResumeBtnTarget) this.taskResumeBtnTarget.disabled = true
     if (this.hasPlaceholderTarget) this.placeholderTarget.hidden = false
     if (this.hasCameraSelectTarget) this.cameraSelectTarget.disabled = true
   }

@@ -14,6 +14,7 @@ export const ADVANCE = {
   NAVIGATE: "navigate",         // 別ページへ遷移（次ページで復元）
   CAMERA_START: "camera_start", // カメラ映像が開始する
   TIMER: "timer",               // 一定時間経過
+  SAVE_COMPLETE: "save_complete", // 保存完了後に再開ボタンが表示される
 }
 
 // ステップ定義。target が null のものは画面中央に表示する。
@@ -48,11 +49,11 @@ export const STEPS = [
     body: "集中度が1秒ごとに更新されます。少し画面を見てみましょう。",
   },
   {
-    id: 6, screen: SCREENS.MEASURE, target: ".btn--finish", advance: ADVANCE.NAVIGATE,
-    body: "終わったら「計測終了して保存」を押します。保存すると一覧に戻ります。",
+    id: 6, screen: SCREENS.MEASURE, target: ".btn--finish", advance: ADVANCE.SAVE_COMPLETE,
+    body: "終わったら「計測終了して保存」を押します。保存後も同じ画面で結果を確認し、そのまま計測を再開できます。",
   },
   {
-    id: 7, screen: SCREENS.TASK_LIST, target: null, advance: ADVANCE.TOUR_BUTTON,
+    id: 7, screen: SCREENS.MEASURE, target: null, advance: ADVANCE.TOUR_BUTTON,
     title: "お疲れさまでした",
     body: "計測が保存されました。ヘッダーの「日次レポート」から今日の詳細を振り返れます。これでツアーは完了です。",
   },

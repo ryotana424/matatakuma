@@ -1,5 +1,5 @@
 import assert from "node:assert"
-import { STEPS, stepById, resolveVisibleStep, nextStepId, isLastStep, SCREENS } from "./tour_steps.js"
+import { STEPS, stepById, resolveVisibleStep, nextStepId, isLastStep, SCREENS, ADVANCE } from "./tour_steps.js"
 
 // --- ステップ定義の健全性 ---
 assert.equal(STEPS.length, 8, "0〜7の8ステップ")
@@ -29,11 +29,13 @@ assert.equal(resolveVisibleStep(1, SCREENS.MEASURE), null, "画面不一致な�
 assert.equal(resolveVisibleStep(4, SCREENS.MEASURE)?.id, 4)
 assert.equal(resolveVisibleStep(5, SCREENS.MEASURE)?.id, 5)
 assert.equal(resolveVisibleStep(6, SCREENS.MEASURE)?.id, 6)
+assert.equal(stepById(6).advance, ADVANCE.SAVE_COMPLETE, "保存完了表示を待って次へ進む")
+assert.match(stepById(6).body, /同じ画面/, "保存後も計測画面に留まることを案内する")
 assert.match(stepById(4).body, /画面上部中央/, "カメラ許可時に推奨位置を案内する")
 assert.match(stepById(4).body, /目線/, "カメラ許可時に推奨する高さを案内する")
-// 締めのステップは一覧画面で表示
-assert.equal(resolveVisibleStep(7, SCREENS.TASK_LIST)?.id, 7, "step7は一覧で表示")
-assert.equal(resolveVisibleStep(7, SCREENS.MEASURE), null)
+// 締めのステップは保存後も同じ計測画面で表示
+assert.equal(resolveVisibleStep(7, SCREENS.MEASURE)?.id, 7, "step7は計測画面で表示")
+assert.equal(resolveVisibleStep(7, SCREENS.TASK_LIST), null)
 
 // --- nextStepId / isLastStep ---
 assert.equal(nextStepId(0), 1)

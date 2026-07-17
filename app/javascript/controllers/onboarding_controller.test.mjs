@@ -32,6 +32,8 @@ assert.equal(source.includes("ADVANCE.MODAL_OPEN"), true, "モーダルopen待�
 assert.equal(source.includes("ADVANCE.NAVIGATE"), true, "遷移待ち分岐（次ページで復元）")
 assert.equal(source.includes("ADVANCE.CAMERA_START"), true, "カメラ開始待ち分岐")
 assert.equal(source.includes("ADVANCE.TIMER"), true, "タイマー分岐")
+assert.equal(source.includes("ADVANCE.SAVE_COMPLETE"), true, "保存完了待ち分岐")
+assert.equal(source.includes("watchSaveComplete"), true, "再開ボタンの表示で保存完了を検出する")
 assert.equal(source.includes("MutationObserver"), true, "DOM変化の監視にMutationObserverを使う")
 // 対象要素が未出現のときは出現を待って配置し直す
 assert.equal(source.includes("waitForTarget"), true, "対象出現待ちの仕組みを持つ")

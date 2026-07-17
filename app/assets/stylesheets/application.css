@@ -644,6 +644,10 @@ button, select, textarea, input { font-family: inherit; }
   justify-content: flex-start;
 }
 
+.task-grid__ops [hidden] {
+  display: none;
+}
+
 /* 計測開始／終了ボタン（行内のコンパクトなアクション） */
 .task-btn {
   display: inline-flex;
@@ -823,6 +827,22 @@ button, select, textarea, input { font-family: inherit; }
   border-radius: 3px;
   background: currentColor;
   flex: none;
+}
+
+/* 再開アイコン（右向きの再生マーク） */
+.btn--resume {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+.btn--resume__icon {
+  display: block;
+  width: 14px;
+  height: 16px;
+  background: currentColor;
+  clip-path: polygon(0 0, 100% 50%, 0 100%);
+  flex: 0 0 14px;
 }
 /* 計測が始まり押せるようになったら、見落とさないよう軽く脈動させる */
 .btn--finish:not(:disabled) {
@@ -1078,8 +1098,16 @@ button, select, textarea, input { font-family: inherit; }
   margin-top: auto;
 }
 
+.measure-actions [hidden] {
+  display: none;
+}
+
 /* 主アクションは横幅いっぱいに広げてカメラパネル下で目立たせる */
 .measure-actions .btn--finish {
+  flex: 1 1 100%;
+}
+
+.measure-actions .btn--primary {
   flex: 1 1 100%;
 }
 

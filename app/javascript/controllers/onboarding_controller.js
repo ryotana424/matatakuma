@@ -158,6 +158,9 @@ export default class extends Controller {
       case ADVANCE.TIMER:
         this.watchTimer(step.timerMs || 5000)
         break
+      case ADVANCE.SAVE_COMPLETE:
+        this.watchSaveComplete()
+        break
       case ADVANCE.NAVIGATE:
         // 対象の操作でページ遷移する。遷移「前」に次ステップを保存しておき、
         // 遷移先ページの connect で resolveVisibleStep が次ステップを復元できるようにする。
@@ -230,6 +233,22 @@ export default class extends Controller {
   watchTimer(ms) {
     const id = setTimeout(() => this.goToNext(), ms)
     this.cleanupFns.push(() => clearTimeout(id))
+  }
+
+  // 保存成功後、計測画面内の「計測を再開」ボタンが表示されたら締めの案内へ進む。
+  watchSaveComplete() {
+    const resumeButton = document.querySelector("[data-measure-target=\"resumeBtn\"]")
+    if (!resumeButton) return
+    if (!resumeButton.hidden) { this.goToNext(); return }
+
+    const observer = new MutationObserver(() => {
+      if (!resumeButton.hidden) {
+        observer.disconnect()
+        this.goToNext()
+      }
+    })
+    observer.observe(resumeButton, { attributes: true, attributeFilter: ["hidden"] })
+    this.cleanupFns.push(() => observer.disconnect())
   }
 
   // ページ遷移を伴うステップ。対象の操作（フォームは submit、リンク/ボタンは click）を捉え、

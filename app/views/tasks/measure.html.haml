@@ -34,6 +34,9 @@
         %button.btn.btn--finish{ type: "button", disabled: true, data: { action: "measure#stop", measure_target: "stopBtn" } }
           %span.btn--finish__icon{ "aria-hidden": true }
           %span 計測終了して保存
+        %button.btn.btn--primary.btn--resume{ type: "button", hidden: true, data: { action: "measure#resume", measure_target: "resumeBtn" } }
+          %span.btn--resume__icon{ "aria-hidden": true }
+          %span 計測を再開
 
     %aside.panel.measure-score{ "aria-label": "集中度スコア" }
       .measure-mini

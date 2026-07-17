@@ -8,7 +8,7 @@ const source = readFileSync(join(currentDir, "measure_controller.js"), "utf8")
 
 assert.equal(source.includes(".drawImage("), false, "カメラ映像をcanvasへ描画しない")
 assert.equal(source.includes("drawPrivacySurface"), true, "匿名化された表示面を描画する")
-assert.equal(source.includes("static targets = [\"video\", \"canvas\", \"score\", \"state\", \"stopBtn\", \"placeholder\", \"message\", \"cameraSelect\", \"pulseCanvas\", \"blinkCount\", \"sessionAverage\", \"miniSessionAverage\", \"sessionElapsed\", \"miniStatus\", \"interventionSelect\", \"dailyDuration\", \"dailyFocusVolume\", \"dailyAverage\"]"), true, "カメラ選択・波形canvas・セッション指標・ミニ表示状態・施策選択・日次ステータスのtargetを持つ")
+assert.equal(source.includes("static targets = [\"video\", \"canvas\", \"score\", \"state\", \"stopBtn\", \"resumeBtn\", \"placeholder\", \"message\", \"cameraSelect\", \"pulseCanvas\", \"blinkCount\", \"sessionAverage\", \"miniSessionAverage\", \"sessionElapsed\", \"miniStatus\", \"interventionSelect\", \"dailyDuration\", \"dailyFocusVolume\", \"dailyAverage\", \"taskMeasurementStatus\", \"taskStopBtn\", \"taskResumeBtn\"]"), true, "カメラ選択・波形canvas・セッション指標・ミニ表示状態・施策選択・日次ステータス・再開ボタン・タスク行状態のtargetを持つ")
 assert.equal(source.includes("this.start()"), true, "画面表示時に自動で計測開始する")
 const startSource = source.slice(source.indexOf("async start()"), source.indexOf("\n  async populateCameraOptions("))
 assert.equal(startSource.includes('error.name === "AbortError"'), true, "無効化された初期カメラ開始ではセッションを開始しない")
@@ -89,7 +89,50 @@ assert.equal(source.includes("Continuity (継続度)"), true, "継続度の日�
 assert.equal(source.includes("this.sessionId = null"), true, "開始時に作成したSession IDを保持する")
 assert.equal(source.includes("this.autosaveTick = setInterval(() => this.saveProgress(), 15000)"), true, "計測中に定期保存する")
 assert.equal(source.includes("await this.createSession()"), true, "計測開始時にrunningセッションを作成する")
-assert.equal(source.includes("await this.saveProgress({ completed: true })"), true, "停止時にcompletedとして最終保存する")
+assert.equal(source.includes("await this.saveProgress({ completed: true, endedAt })"), true, "停止時にcompletedとして最終保存する")
+
+const stopSource = source.slice(
+  source.indexOf("async stop()"),
+  source.indexOf("\n  async stopForAbsence("),
+)
+assert.equal(stopSource.includes("window.location.href"), false, "手動終了後も計測画面に留まる")
+assert.equal(stopSource.includes("if (!this.startedAt || !this.sessionId) return"), true, "セッション作成完了前は終了処理を始めない")
+assert.equal(stopSource.includes("try"), true, "最終保存の通信例外を処理する")
+assert.equal(stopSource.includes("catch"), true, "最終保存の通信例外後も再試行できる状態へ戻す")
+assert.equal(stopSource.includes("this.showStoppedState()"), true, "保存成功後は再開できる終了表示へ切り替える")
+assert.equal(stopSource.includes("this.commitCurrentSessionToDailyBase(endedAt)"), true, "保存したセッションを再開後の日次集計ベースへ加える")
+
+const showStoppedStateSource = source.slice(
+  source.indexOf("\n  showStoppedState()"),
+  source.indexOf("\n  async resume("),
+)
+assert.equal(showStoppedStateSource.includes("this.stopBtnTarget.hidden = true"), true, "終了後は保存ボタンを隠す")
+assert.equal(showStoppedStateSource.includes("this.resumeBtnTarget.hidden = false"), true, "終了後は再開ボタンを表示する")
+assert.equal(showStoppedStateSource.includes('this.miniStatusTarget.textContent = "計測終了"'), true, "終了後の状態をスコアパネルにも表示する")
+assert.equal(showStoppedStateSource.includes('this.taskMeasurementStatusTarget.textContent = "計測終了"'), true, "終了後のタスク行を計測終了表示へ切り替える")
+assert.equal(showStoppedStateSource.includes("this.taskStopBtnTarget.hidden = true"), true, "終了後のタスク行に停止ボタンを残さない")
+assert.equal(showStoppedStateSource.includes("this.taskResumeBtnTarget.hidden = false"), true, "終了後のタスク行に計測開始ボタンを表示する")
+
+const resumeSource = source.slice(
+  source.indexOf("async resume("),
+  source.indexOf("\n  async stopForAbsence("),
+)
+assert.equal(resumeSource.includes("await this.start()"), true, "再開時はカメラと新しいセッションを開始する")
+assert.equal(resumeSource.includes("this.resumeBtnTarget.disabled = true"), true, "再開処理中の二重操作を防ぐ")
+assert.equal(source.includes("this.stopBtnTarget.hidden = false"), true, "新しいセッション開始後は保存ボタンを戻す")
+assert.equal(source.includes("this.resumeBtnTarget.hidden = true"), true, "新しいセッション開始後は再開ボタンを隠す")
+assert.equal(source.includes('this.taskMeasurementStatusTarget.textContent = "計測中"'), true, "再開後のタスク行を計測中へ戻す")
+assert.equal(source.includes("this.taskStopBtnTarget.hidden = false"), true, "再開後のタスク行に停止ボタンを戻す")
+assert.equal(source.includes("this.taskResumeBtnTarget.hidden = true"), true, "再開後はタスク行の計測開始ボタンを隠す")
+
+const commitCurrentSessionSource = source.slice(
+  source.indexOf("\n  commitCurrentSessionToDailyBase("),
+  source.indexOf("\n  showStoppedState("),
+)
+assert.equal(commitCurrentSessionSource.includes("this.dailyBaseDurationSecValue += summary.duration_sec"), true, "保存した作業時間を日次ベースへ加算する")
+assert.equal(commitCurrentSessionSource.includes("this.dailyBaseVolumeValue += summary.focus_volume"), true, "保存した集中度総量を日次ベースへ加算する")
+assert.equal(commitCurrentSessionSource.includes("this.dailyBaseScoreSumValue += summary.avg_score"), true, "保存した平均スコアを日次ベースへ加算する")
+assert.equal(commitCurrentSessionSource.includes("this.dailyBaseSessionCountValue += 1"), true, "保存したセッション数を日次ベースへ加算する")
 assert.equal(source.includes("faceAbsenceDeadlineMs"), true, "顔の連続未検出から自動終了期限を判定する")
 assert.equal(source.includes("void this.stopForAbsence(new Date(deadlineMs))"), true, "離席が30分続いた時点で自動終了する")
 assert.equal(source.includes("this.faceAbsentSinceMs = null"), true, "顔を再検出したら連続離席時間をリセットする")
@@ -116,9 +159,17 @@ const stopForAbsenceSource = source.slice(
 assert.equal(stopForAbsenceSource.includes("window.location.href"), false, "離席終了後はタスク一覧へ移動しない")
 assert.equal(stopForAbsenceSource.includes("this.stopVideoStream()"), false, "離席終了後も復帰検出用のカメラを止めない")
 assert.equal(stopForAbsenceSource.includes("catch"), true, "離席終了の通信エラー時も失敗状態へ移れる")
+assert.equal(stopForAbsenceSource.includes("this.commitCurrentSessionToDailyBase(endedAt)"), true, "離席終了したセッションも自動再開後の日次集計へ引き継ぐ")
 assert.equal(stopForAbsenceSource.includes("this.miniStatusTarget.textContent = \"復帰待ち\""), true, "離席終了後のミニ表示は復帰待ちを示す")
 assert.equal(stopForAbsenceSource.includes("this.sessionElapsedTarget.textContent = \"--\""), true, "離席終了後のミニ表示は古い経過時間を残さない")
 assert.equal(stopForAbsenceSource.includes("this.miniSessionAverageTarget.textContent = \"--\""), true, "離席終了後のミニ表示は古い平均を残さない")
+
+const shutdownSource = source.slice(
+  source.indexOf("shutdown()"),
+  source.indexOf("\n  async stopVideoStream("),
+)
+assert.equal(shutdownSource.includes("this.taskStopBtnTarget.disabled = true"), true, "停止中とセッション作成中はタスク行の終了操作を無効にする")
+assert.equal(shutdownSource.includes("this.taskResumeBtnTarget.disabled = true"), true, "停止処理中はタスク行の開始操作も無効にする")
 
 assert.equal(source.includes("payload.intervention_id = this.selectedInterventionId()"), true, "定期保存と終了保存で選択中の施策IDを送る")
 assert.equal(source.includes("return value === \"\" ? null : Number(value)"), true, "施策未選択はnullとして送り紐付けを外せる")

@@ -146,8 +146,13 @@ class TasksControllerTest < ActionDispatch::IntegrationTest
     assert_select "[data-measure-target='miniSessionAverage']", "—"
     assert_select "body", { text: /計測中: 計測タスク/, count: 0 }
     assert_select "button", /計測終了して保存/
-    # 計測開始は他タスク行にはあり得るが、リンク（a要素）であってbuttonではない
-    assert_select "button", { text: /計測開始/, count: 0 }
+    assert_select "button[data-measure-target='resumeBtn'][hidden]", /計測を再開/
+    assert_select "button[data-measure-target='resumeBtn'] .btn--resume__icon"
+    assert_select "[data-measure-target='taskMeasurementStatus']", /計測中/
+    assert_select "button[data-measure-target='taskStopBtn'][disabled]", /計測終了/
+    assert_select "button[data-measure-target='taskResumeBtn'][hidden]", /計測開始/
+    # 現在タスクの計測開始ボタンは保存後の再開用としてDOMに保持する
+    assert_select "button[data-measure-target='taskResumeBtn'][hidden]", count: 1
   end
 
   test "未着手タスクの計測画面を開くと着手中にする" do

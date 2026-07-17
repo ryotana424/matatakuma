@@ -30,7 +30,7 @@
             - if measuring
               %span.task-grid__measuring
                 %span.task-grid__measuring-dot{ "aria-hidden": true }
-                計測中
+                %span{ data: { measure_target: "taskMeasurementStatus" } } 計測中
           %span
             = form_with model: task, url: task_path(task), method: :patch, class: "task-status-form" do |f|
               = f.select :status, status_action_options, { selected: task.status }, class: "status-pill task-status-select status-pill--#{task.status}", "aria-label": "#{task.name}の状態", onchange: "this.form.requestSubmit()"
@@ -42,9 +42,12 @@
             %span.task-grid__mono= task.average_score || "—"
           %span.task-grid__ops
             - if measuring
-              %button.task-btn.task-btn--stop{ type: "button", data: { action: "measure#stop" } }
+              %button.task-btn.task-btn--stop{ type: "button", disabled: true, data: { action: "measure#stop", measure_target: "taskStopBtn" } }
                 %span.task-btn__stop-icon{ "aria-hidden": true }
                 計測終了
+              %button.task-btn{ type: "button", hidden: true, data: { action: "measure#resume", measure_target: "taskResumeBtn" } }
+                %span.task-btn__play-icon{ "aria-hidden": true }
+                計測開始
             - else
               = link_to measure_task_path(task), class: "task-btn" do
                 %span.task-btn__play-icon{ "aria-hidden": true }
