@@ -1,5 +1,5 @@
 import { Controller } from "@hotwired/stimulus"
-import { STEPS, SCREENS, ADVANCE, stepById, resolveVisibleStep, nextStepId, isLastStep } from "onboarding/tour_steps"
+import { SCREENS, ADVANCE, stepById, resolveVisibleStep, nextStepId, isLastStep } from "onboarding/tour_steps"
 import { readStep, writeStep, isDoneStored, markDone } from "onboarding/tour_storage"
 
 // オンボーディングツアーの DOM アダプタ。
@@ -31,9 +31,8 @@ export default class extends Controller {
   }
 
   // 現在ページがどの画面かを DOM から判定する。
+  // 計測画面にもタスク一覧（.task-panel）があるため、計測を先に判定する。
   detectScreen() {
-    if (document.querySelector(".report-detail")) return SCREENS.REPORT_DETAIL
-    if (document.querySelector(".report-index")) return SCREENS.REPORT_INDEX
     if (document.querySelector(".fp-page[data-controller~=\"measure\"]")) return SCREENS.MEASURE
     if (document.querySelector(".task-panel")) return SCREENS.TASK_LIST
     return null
@@ -41,9 +40,15 @@ export default class extends Controller {
 
   // 現在の保存ステップと画面から、表示すべき吹き出しを描く。
   // この画面で表示すべきものが無ければ非表示のまま待機する。
-  // 画面はモーダル開閉で変わるため（Turbo frame の部分更新では connect が走らない）、
-  // 描画のたびに現在画面を判定し直す。
   renderCurrent() {
+    // 再描画のたびに前回の完了トリガー監視を掃除してから張り直す（重複防止）。
+    this.teardownAdvanceWatch()
+    // 保存ステップ自体が存在しない（ステップ定義変更後の範囲外値など）なら、
+    // 中途半端な状態で残さず完了扱いにして畳む。
+    if (!stepById(this.currentStepId)) {
+      this.finish()
+      return
+    }
     this.screen = this.detectScreen()
     const step = resolveVisibleStep(this.currentStepId, this.screen)
     if (!step) {
@@ -65,14 +70,14 @@ export default class extends Controller {
     if (usesButton) this.nextBtnTarget.textContent = isLastStep(step.id) ? "完了" : "はじめる"
 
     this.positionFor(step)
-    this.setupAdvanceWatch(step) // 実装は Task5
+    this.setupAdvanceWatch(step)
   }
 
   // target があればその要素の位置にハイライト＋吹き出しを寄せる。無ければ中央表示。
   positionFor(step) {
     const el = step.target ? document.querySelector(step.target) : null
     if (!el) {
-      // 中央表示。対象がまだ無いステップ（target指定あり）は出現を待つ（Task5）
+      // 中央表示。対象がまだ無いステップ（target指定あり）は出現を待って配置し直す
       this.bubbleTarget.classList.add("onboarding__bubble--center")
       this.highlightTarget.hidden = true
       return
@@ -129,15 +134,12 @@ export default class extends Controller {
   }
 
   // ステップの完了トリガーを監視する。検出したら goToNext() を呼ぶ。
-  // NAVIGATE は別ページで復元されるため、ここでは何も待たない（対象クリックは阻害しない）。
   setupAdvanceWatch(step) {
-    // target 指定ありなのに要素がまだ無い場合は、出現を待って配置し直してから監視を張る。
+    // ハイライト配置と完了トリガーは別物として扱う。
+    // target がまだ無い場合はハイライトだけ出現を待って更新するが、
+    // 完了トリガー（attachAdvance）は target の有無に関わらず必ず張る。
     if (step.target && !document.querySelector(step.target)) {
-      this.waitForTarget(step.target, () => {
-        this.positionFor(step)
-        this.attachAdvance(step)
-      })
-      return
+      this.waitForTarget(step.target, () => this.positionFor(step))
     }
     this.attachAdvance(step)
   }
@@ -147,9 +149,6 @@ export default class extends Controller {
       case ADVANCE.TOUR_BUTTON:
         // ボタンの click は advanceByButton() が拾う。追加監視は不要。
         break
-      case ADVANCE.CLICK_TARGET:
-        this.watchClick(step.target)
-        break
       case ADVANCE.MODAL_OPEN:
         this.watchModalOpen(step.modalTarget)
         break
@@ -158,9 +157,6 @@ export default class extends Controller {
         break
       case ADVANCE.TIMER:
         this.watchTimer(step.timerMs || 5000)
-        break
-      case ADVANCE.ELEMENT_APPEAR:
-        this.watchElementAppear(step.appearTarget)
         break
       case ADVANCE.NAVIGATE:
         // 対象の操作でページ遷移する。遷移「前」に次ステップを保存しておき、
@@ -182,14 +178,6 @@ export default class extends Controller {
     })
     observer.observe(document.body, { childList: true, subtree: true })
     this.cleanupFns.push(() => observer.disconnect())
-  }
-
-  watchClick(selector) {
-    const el = document.querySelector(selector)
-    if (!el) return
-    const handler = () => this.goToNext()
-    el.addEventListener("click", handler, { once: true })
-    this.cleanupFns.push(() => el.removeEventListener("click", handler))
   }
 
   // 対象モーダルに open クラスが付いたら次へ。
@@ -242,19 +230,6 @@ export default class extends Controller {
   watchTimer(ms) {
     const id = setTimeout(() => this.goToNext(), ms)
     this.cleanupFns.push(() => clearTimeout(id))
-  }
-
-  // 指定要素が DOM に出現したら次へ（例: レポート詳細 .report-detail）。
-  watchElementAppear(selector) {
-    if (document.querySelector(selector)) { this.goToNext(); return }
-    const observer = new MutationObserver(() => {
-      if (document.querySelector(selector)) {
-        observer.disconnect()
-        this.goToNext()
-      }
-    })
-    observer.observe(document.body, { childList: true, subtree: true })
-    this.cleanupFns.push(() => observer.disconnect())
   }
 
   // ページ遷移を伴うステップ。対象の操作（フォームは submit、リンク/ボタンは click）を捉え、

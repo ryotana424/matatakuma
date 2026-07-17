@@ -3,24 +3,22 @@
 
 // 画面種別。onboarding_controller が現在ページを判定してこの値のいずれかを渡す。
 export const SCREENS = {
-  TASK_LIST: "task_list",       // ルート / 計測画面のタスク一覧部分（ヘッダーもここ扱い）
-  MEASURE: "measure",           // 計測画面
-  REPORT_INDEX: "report_index", // 日次レポート一覧モーダル
-  REPORT_DETAIL: "report_detail", // 日次レポート詳細モーダル
+  TASK_LIST: "task_list", // ルート / 計測画面のタスク一覧部分（ヘッダーもここ扱い）
+  MEASURE: "measure",     // 計測画面
 }
 
 // advance（完了トリガー）の種別。実際の監視方法は onboarding_controller が解釈する。
 export const ADVANCE = {
-  TOUR_BUTTON: "tour_button",     // 吹き出し内の「はじめる」「完了」ボタン
-  CLICK_TARGET: "click_target",   // 対象要素のクリック
-  MODAL_OPEN: "modal_open",       // 対象モーダルに open クラスが付く
-  NAVIGATE: "navigate",           // 別ページへ遷移（次ページで復元）
-  CAMERA_START: "camera_start",   // カメラ映像が開始する
-  TIMER: "timer",                 // 一定時間経過
-  ELEMENT_APPEAR: "element_appear", // 対象要素が DOM に出現する
+  TOUR_BUTTON: "tour_button",   // 吹き出し内の「はじめる」「完了」ボタン
+  MODAL_OPEN: "modal_open",     // 対象モーダルに open クラスが付く
+  NAVIGATE: "navigate",         // 別ページへ遷移（次ページで復元）
+  CAMERA_START: "camera_start", // カメラ映像が開始する
+  TIMER: "timer",               // 一定時間経過
 }
 
 // ステップ定義。target が null のものは画面中央に表示する。
+// ツアーは「タスク登録 → 計測 → 保存」まで。日次レポートは締めの案内で触れるだけにし、
+// Turbo frame モーダル内の操作誘導は行わない（開閉と画面判定の競合を避けるため）。
 export const STEPS = [
   {
     id: 0, screen: SCREENS.TASK_LIST, target: null, advance: ADVANCE.TOUR_BUTTON,
@@ -54,19 +52,9 @@ export const STEPS = [
     body: "終わったら「計測終了して保存」を押します。保存すると一覧に戻ります。",
   },
   {
-    id: 7, screen: SCREENS.TASK_LIST, target: ".fp-nav__link[data-turbo-frame=\"modal\"]", advance: ADVANCE.MODAL_OPEN,
-    modalTarget: ".modal-overlay[data-controller=\"modal\"]",
-    body: "保存した計測は日次レポートで振り返れます。ヘッダーの「日次レポート」を開いてみましょう。",
-  },
-  {
-    id: 8, screen: SCREENS.REPORT_INDEX, target: ".report-day:has(.report-day__today)", advance: ADVANCE.ELEMENT_APPEAR,
-    appearTarget: ".report-detail",
-    body: "今日の行を開くと、その日の詳細レポートが見られます。",
-  },
-  {
-    id: 9, screen: SCREENS.REPORT_DETAIL, target: null, advance: ADVANCE.TOUR_BUTTON,
+    id: 7, screen: SCREENS.TASK_LIST, target: null, advance: ADVANCE.TOUR_BUTTON,
     title: "お疲れさまでした",
-    body: "これが詳細レポートです。時間帯別の集中やタスク別サマリーを振り返れます。これでツアーは完了です。",
+    body: "計測が保存されました。ヘッダーの「日次レポート」から今日の詳細を振り返れます。これでツアーは完了です。",
   },
 ]
 
