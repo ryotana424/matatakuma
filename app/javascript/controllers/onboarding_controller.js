@@ -160,7 +160,9 @@ export default class extends Controller {
         this.watchElementAppear(step.appearTarget)
         break
       case ADVANCE.NAVIGATE:
-        // 遷移先ページで resolveVisibleStep により次ステップが復元される。ここでは待たない。
+        // 対象の操作でページ遷移する。遷移「前」に次ステップを保存しておき、
+        // 遷移先ページの connect で resolveVisibleStep が次ステップを復元できるようにする。
+        this.watchNavigate(step.target)
         break
     }
   }
@@ -250,6 +252,34 @@ export default class extends Controller {
     })
     observer.observe(document.body, { childList: true, subtree: true })
     this.cleanupFns.push(() => observer.disconnect())
+  }
+
+  // ページ遷移を伴うステップ。対象の操作（フォームは submit、リンク/ボタンは click）を捉え、
+  // 遷移前に次ステップを保存だけする。実際の画面遷移は既存UIに任せ、こちらは阻害しない。
+  watchNavigate(selector) {
+    const el = document.querySelector(selector)
+    if (!el) return
+    // <form> 自体、またはフォームを含む要素なら submit を、それ以外は click を待つ。
+    const form = el.tagName === "FORM" ? el : el.querySelector("form")
+    if (form) {
+      const onSubmit = () => this.advanceStored()
+      form.addEventListener("submit", onSubmit, { once: true })
+      this.cleanupFns.push(() => form.removeEventListener("submit", onSubmit))
+      return
+    }
+    const onClick = () => this.advanceStored()
+    el.addEventListener("click", onClick, { once: true })
+    this.cleanupFns.push(() => el.removeEventListener("click", onClick))
+  }
+
+  // 次ステップ番号を保存するだけ（再描画しない）。ページ遷移する NAVIGATE 用。
+  advanceStored() {
+    const next = nextStepId(this.currentStepId)
+    if (next == null) {
+      markDone(this.storage)
+      return
+    }
+    writeStep(this.storage, next)
   }
 
   teardownAdvanceWatch() {

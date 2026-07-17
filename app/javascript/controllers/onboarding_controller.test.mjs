@@ -40,5 +40,9 @@ assert.equal(source.includes("waitForTarget") || source.includes("ELEMENT_APPEAR
 // positionFor は fixed 座標系（getBoundingClientRect をそのまま使い scroll オフセットを足さない）
 assert.equal(source.includes("window.scrollY"), false, "fixed座標なのでscrollYを足さない")
 assert.equal(source.includes("window.scrollX"), false, "fixed座標なのでscrollXを足さない")
+// NAVIGATE は遷移前に次ステップを保存する（submit/click を捉える）
+assert.equal(source.includes("watchNavigate"), true, "遷移ステップの監視メソッドを持つ")
+assert.equal(source.includes("advanceStored"), true, "遷移前に次ステップだけ保存する")
+assert.equal(source.includes("\"submit\""), true, "フォーム送信を捉える")
 
 console.log("onboarding controller OK")

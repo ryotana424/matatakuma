@@ -37,8 +37,8 @@ export const STEPS = [
     body: "タスク名を入れて「追加」を押してください。",
   },
   {
-    id: 3, screen: SCREENS.TASK_LIST, target: ".task-grid__row:last-child .task-btn", advance: ADVANCE.NAVIGATE,
-    body: "登録できました。追加したタスクの「計測開始」を押すと計測画面へ進みます。",
+    id: 3, screen: SCREENS.TASK_LIST, target: ".task-grid__row .task-btn", advance: ADVANCE.NAVIGATE,
+    body: "登録できました。追加したタスク（一覧の先頭）の「計測開始」を押すと計測画面へ進みます。",
   },
   {
     id: 4, screen: SCREENS.MEASURE, target: null, advance: ADVANCE.CAMERA_START,
