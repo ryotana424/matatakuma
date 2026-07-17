@@ -1,11 +1,11 @@
 require "test_helper"
 
 class PagesControllerTest < ActionDispatch::IntegrationTest
-  test "計測方法ページが表示できる" do
+  test "Aboutページが表示できる" do
     get about_url
 
     assert_response :success
-    assert_select "title", /計測方法/
+    assert_select "title", /About/
     # 計測の流れ（番号付きステップ）
     assert_select ".flow-step", 4
     assert_select "body", /タスクを選んで計測開始/
