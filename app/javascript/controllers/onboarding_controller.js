@@ -41,7 +41,10 @@ export default class extends Controller {
 
   // 現在の保存ステップと画面から、表示すべき吹き出しを描く。
   // この画面で表示すべきものが無ければ非表示のまま待機する。
+  // 画面はモーダル開閉で変わるため（Turbo frame の部分更新では connect が走らない）、
+  // 描画のたびに現在画面を判定し直す。
   renderCurrent() {
+    this.screen = this.detectScreen()
     const step = resolveVisibleStep(this.currentStepId, this.screen)
     if (!step) {
       this.hide()

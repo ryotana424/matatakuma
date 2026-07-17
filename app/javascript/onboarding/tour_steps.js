@@ -55,7 +55,7 @@ export const STEPS = [
   },
   {
     id: 7, screen: SCREENS.TASK_LIST, target: ".fp-nav__link[data-turbo-frame=\"modal\"]", advance: ADVANCE.MODAL_OPEN,
-    modalTarget: ".modal-overlay",
+    modalTarget: ".modal-overlay[data-controller=\"modal\"]",
     body: "保存した計測は日次レポートで振り返れます。ヘッダーの「日次レポート」を開いてみましょう。",
   },
   {
