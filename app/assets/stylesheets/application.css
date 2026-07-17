@@ -2392,3 +2392,56 @@ button, select, textarea, input { font-family: inherit; }
     font-size: clamp(54px, min(18vw, 28vh), 80px);
   }
 }
+
+/* オンボーディングツアー */
+.onboarding[hidden] { display: none; }
+.onboarding {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  pointer-events: none; /* 実UI操作を阻害しない。吹き出しだけ pointer-events を戻す */
+}
+.onboarding__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(6, 9, 13, 0.45);
+}
+.onboarding__highlight {
+  position: absolute;
+  border: 2px solid var(--color-accent);
+  border-radius: 8px;
+  box-shadow: 0 0 0 9999px rgba(6, 9, 13, 0.45);
+  transition: top 0.15s, left 0.15s, width 0.15s, height 0.15s;
+}
+.onboarding__highlight[hidden] { display: none; }
+.onboarding__bubble {
+  position: absolute;
+  max-width: min(360px, calc(100vw - 32px));
+  padding: 16px 18px;
+  background: var(--color-surface);
+  color: var(--color-ink);
+  border: 1px solid var(--surface-line);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+  pointer-events: auto; /* 吹き出しは操作可能に戻す */
+}
+.onboarding__bubble--center {
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%);
+}
+.onboarding__skip {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  border: none;
+  background: transparent;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--color-ink-3);
+}
+.onboarding__title { margin: 0 0 6px; font-size: 16px; }
+.onboarding__body { margin: 0; font-size: 14px; line-height: 1.6; }
+.onboarding__actions { margin-top: 14px; display: flex; justify-content: flex-end; }
+.onboarding__next[hidden] { display: none; }

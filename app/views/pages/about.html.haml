@@ -113,3 +113,13 @@
         認知的集中の直接測定ではありません。測っているのは、カメラから見える顔・目・頭部の状態だけです。
         照明、カメラ位置、眼鏡、髪、顔の向き、画面外資料を見る作業などで値は変わります。
         人事評価、監視、懲戒判断、医療判断には使わないでください。
+
+    -# 使い方ガイド（オンボーディングツアーの再生）
+    %section.ds-panel{ data: { controller: "restart-onboarding" } }
+      .ds-panel__head
+        %h2.ds-panel__title 使い方ガイド
+      %p{ style: "margin:0 0 16px;color:var(--color-ink-2)" }
+        タスク登録から計測・保存までの流れを、実際の画面を操作しながら案内するツアーを開始します。
+        初回アクセス時にも自動で表示されますが、ここから何度でも受け直せます。
+      %button.ds-btn.ds-btn--primary{ type: "button", data: { action: "restart-onboarding#restart" } }
+        オンボーディングをもう一度受ける

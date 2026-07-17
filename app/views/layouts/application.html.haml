@@ -55,3 +55,14 @@
       .modal-dialog{ role: "dialog", "aria-modal": "true", data: { modal_target: "dialog" } }
         %button.modal-close{ type: "button", "aria-label": "閉じる", data: { action: "modal#close" } } ✕
         = turbo_frame_tag "modal", class: "modal-frame", data: { modal_target: "frame" }
+
+    -# オンボーディングツアー枠（全ページ共通）。初回のみ onboarding コントローラが起動する
+    .onboarding{ data: { controller: "onboarding" }, hidden: true }
+      .onboarding__backdrop{ data: { onboarding_target: "backdrop" } }
+      .onboarding__highlight{ data: { onboarding_target: "highlight" }, "aria-hidden": true }
+      .onboarding__bubble{ role: "dialog", "aria-modal": "true", "aria-label": "オンボーディングツアー", data: { onboarding_target: "bubble" } }
+        %button.onboarding__skip{ type: "button", "aria-label": "ツアーをスキップ", data: { action: "onboarding#skip" } } ✕
+        %h2.onboarding__title{ data: { onboarding_target: "title" } }
+        %p.onboarding__body{ data: { onboarding_target: "body" } }
+        .onboarding__actions
+          %button.btn.btn--primary.onboarding__next{ type: "button", hidden: true, data: { onboarding_target: "nextBtn", action: "onboarding#advanceByButton" } }

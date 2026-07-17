@@ -1,11 +1,11 @@
 require "test_helper"
 
 class PagesControllerTest < ActionDispatch::IntegrationTest
-  test "計測方法ページが表示できる" do
+  test "Aboutページが表示できる" do
     get about_url
 
     assert_response :success
-    assert_select "title", /計測方法/
+    assert_select "title", /About/
     # 計測の流れ（番号付きステップ）
     assert_select ".flow-step", 4
     assert_select "body", /タスクを選んで計測開始/
@@ -19,6 +19,9 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     # プライバシー
     assert_select ".privacy-list li", 4
     assert_select "body", /ブラウザ内だけで処理されます/
+    # 使い方ガイド（オンボーディング再生ボタン）
+    assert_select "[data-controller='restart-onboarding']"
+    assert_select "button[data-action='restart-onboarding#restart']", /オンボーディングをもう一度受ける/
     # 旧デザインの残骸がないこと
     assert_select ".metric-thumb", count: 0
     assert_select ".about-panel", count: 0
