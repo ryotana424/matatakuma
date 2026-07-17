@@ -1,12 +1,15 @@
 -# タスク一覧＋タスク追加モーダル。index と measure の両画面から共通利用する
--# ステータスenum値（todo/doing/done/archived/interrupted）→ 日本語ラベルへの対応表
-- status_labels = { "todo" => "未着手", "doing" => "着手中", "done" => "完了", "archived" => "アーカイブ", "interrupted" => "中断" }
 - status_action_options = [["未着手", "todo"], ["着手中", "doing"], ["完了", "done"], ["アーカイブ", "archived"], ["中断", "interrupted"]]
+- active_statuses = %w[todo doing interrupted]
+- active_tasks_present = tasks.any? { |task| task == current_task || active_statuses.include?(task.status) }
 
 -# open value は .to_s で文字列化する（Hamlは属性値がfalseだと属性自体を省略するため）
-%section.task-panel.panel{ "aria-label": "タスク一覧", data: { controller: "task-modal", task_modal_open_value: form_task.errors.any?.to_s } }
+%section.task-panel.panel{ "aria-label": "タスク一覧", data: { controller: "task-modal task-list-filter", task_modal_open_value: form_task.errors.any?.to_s } }
   .task-panel__head
     %h2.task-panel__title タスク一覧
+    .task-list-filter.segmented{ role: "group", "aria-label": "タスク表示切替" }
+      %button.segmented__btn.segmented__btn--active{ type: "button", "aria-pressed": "true", data: { task_list_filter_target: "button", task_list_filter_filter_param: "active", action: "task-list-filter#select" } } 進行中
+      %button.segmented__btn{ type: "button", "aria-pressed": "false", data: { task_list_filter_target: "button", task_list_filter_filter_param: "finished", action: "task-list-filter#select" } } 終了済
     %button.btn.btn--ghost.task-panel__add{ type: "button", data: { action: "task-modal#open" } } ＋ タスク追加
 
   - if tasks.any?
@@ -20,7 +23,8 @@
         %span 操作
       - tasks.each do |task|
         - measuring = current_task == task
-        .task-grid__row{ class: ("task-grid__row--measuring" if measuring) }
+        - group = measuring || active_statuses.include?(task.status) ? "active" : "finished"
+        .task-grid__row{ class: ("task-grid__row--measuring" if measuring), hidden: (group == "finished"), data: { task_list_filter_target: "row", task_list_filter_group: group } }
           %span.task-grid__name
             = task.name
             - if measuring
@@ -28,11 +32,8 @@
                 %span.task-grid__measuring-dot{ "aria-hidden": true }
                 計測中
           %span
-            - if task.sessions.exists?
-              = form_with model: task, url: task_path(task), method: :patch, class: "task-status-form" do |f|
-                = f.select :status, status_action_options, { selected: task.status }, class: "status-pill task-status-select status-pill--#{task.status}", "aria-label": "#{task.name}の状態", onchange: "this.form.requestSubmit()"
-            - else
-              %span.status-pill{ class: "status-pill--#{task.status}" }= status_labels[task.status]
+            = form_with model: task, url: task_path(task), method: :patch, class: "task-status-form" do |f|
+              = f.select :status, status_action_options, { selected: task.status }, class: "status-pill task-status-select status-pill--#{task.status}", "aria-label": "#{task.name}の状態", onchange: "this.form.requestSubmit()"
           %span.task-grid__num.task-grid__mono= format_duration(task.total_duration_sec)
           %span.task-grid__num.task-grid__mono= task.focus_volume ? format_focus_volume(task.focus_volume) : "—"
           %span.task-grid__score
@@ -48,10 +49,17 @@
               = link_to measure_task_path(task), class: "task-btn" do
                 %span.task-btn__play-icon{ "aria-hidden": true }
                 計測開始
-  - else
-    .empty-state
+  .empty-state{ hidden: active_tasks_present, data: { task_list_filter_target: "empty", task_list_filter_group: "active" } }
+    - if tasks.empty?
       %p.empty-state__title まだタスクがありません
       %p 「＋ タスク追加」から最初のタスクを追加してください。
+    - else
+      %p.empty-state__title 進行中のタスクはありません
+      %p 「終了済」に切り替えると完了・アーカイブしたタスクを確認できます。
+
+  .empty-state{ hidden: true, data: { task_list_filter_target: "empty", task_list_filter_group: "finished" } }
+    %p.empty-state__title 終了済のタスクはありません
+    %p 完了またはアーカイブしたタスクがここに表示されます。
 
   -# タスク追加モーダル（静的コンテンツ。開閉は task-modal コントローラ）
   .modal-overlay.task-modal{ data: { task_modal_target: "overlay", action: "click->task-modal#backdrop keydown.esc@window->task-modal#close" } }

@@ -10,6 +10,26 @@ class TasksControllerTest < ActionDispatch::IntegrationTest
     assert_select "body", /資料作成/
   end
 
+  test "タスク一覧は進行中を初期表示し終了済へ切り替えられる" do
+    Task.create!(name: "未着手タスク", status: :todo)
+    Task.create!(name: "着手中タスク", status: :doing)
+    Task.create!(name: "中断タスク", status: :interrupted)
+    Task.create!(name: "完了タスク", status: :done)
+    Task.create!(name: "アーカイブタスク", status: :archived)
+
+    get tasks_url
+
+    assert_select ".task-list-filter.segmented[aria-label='タスク表示切替']" do
+      assert_select "button.segmented__btn--active[aria-pressed='true']", "進行中"
+      assert_select "button[aria-pressed='false']", "終了済"
+    end
+    assert_select ".task-grid__row[data-task-list-filter-group='active']:not([hidden])", /未着手タスク/
+    assert_select ".task-grid__row[data-task-list-filter-group='active']:not([hidden])", /着手中タスク/
+    assert_select ".task-grid__row[data-task-list-filter-group='active']:not([hidden])", /中断タスク/
+    assert_select ".task-grid__row[data-task-list-filter-group='finished'][hidden]", /完了タスク/
+    assert_select ".task-grid__row[data-task-list-filter-group='finished'][hidden]", /アーカイブタスク/
+  end
+
   test "タスクを作成できる" do
     assert_difference "Task.count", 1 do
       post tasks_url, params: { task: { name: "新規タスク" } }
@@ -102,13 +122,18 @@ class TasksControllerTest < ActionDispatch::IntegrationTest
     assert_select ".task-grid__ops form[action='#{task_path(task)}']", count: 0
   end
 
-  test "未計測タスクは状態欄に表示だけ出す" do
-    Task.create!(name: "未計測")
+  test "未計測の未着手タスクも状態欄のプルダウンで変更できる" do
+    task = Task.create!(name: "未計測")
 
     get tasks_url
 
-    assert_select ".task-grid__row .status-pill", "未着手"
-    assert_select ".task-grid__row select[name='task[status]']", count: 0
+    assert_select ".task-grid__row form[action='#{task_path(task)}'] select[name='task[status]'][onchange='this.form.requestSubmit()']"
+    assert_select "option[value=todo][selected=selected]", "未着手"
+
+    patch task_url(task), params: { task: { status: "doing" } }
+
+    assert_redirected_to tasks_url
+    assert task.reload.doing?
   end
 
   test "計測画面が表示できる" do
@@ -237,5 +262,14 @@ class TasksControllerTest < ActionDispatch::IntegrationTest
     assert_select "body", /別タスク/
     # 計測中の行は「計測中」ラベルになり計測開始リンクを出さない
     assert_select ".task-grid__row--measuring .task-grid__measuring", /計測中/
+  end
+
+  test "終了済タスクの計測画面でも計測中の行を進行中として表示する" do
+    task = Task.create!(name: "再計測タスク", status: :archived)
+
+    get measure_task_url(task)
+
+    assert_response :success
+    assert_select ".task-grid__row--measuring[data-task-list-filter-group='active']:not([hidden])", /再計測タスク/
   end
 end

@@ -1,6 +1,12 @@
 require "test_helper"
 
 class ApplicationCssTest < ActiveSupport::TestCase
+  test "非表示にしたタスク行はグリッド指定より優先して隠す" do
+    css = Rails.root.join("app/assets/stylesheets/application.css").read
+
+    assert_match(/\.task-grid__row\[hidden\]\s*\{[^}]*display:\s*none/m, css)
+  end
+
   test "未着手の状態セレクトは白背景にならない" do
     css = Rails.root.join("app/assets/stylesheets/application.css").read
 

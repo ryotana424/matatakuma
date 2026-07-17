@@ -574,6 +574,10 @@ button, select, textarea, input { font-family: inherit; }
   border-bottom: 1px solid var(--color-border);
 }
 
+.task-grid__row[hidden] {
+  display: none;
+}
+
 .task-grid__row--measuring {
   background: var(--color-accent-soft);
 }
