@@ -184,21 +184,24 @@ class TasksControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "一覧ページの本日集計は完了と中断セッションを対象にする" do
-    task = Task.create!(name: "コーディング")
-    task.sessions.create!(started_at: 2.hours.ago, ended_at: 1.hour.ago, duration_sec: 1800,
-                          avg_score: 80, status: :completed)
-    task.sessions.create!(started_at: 1.hour.ago, ended_at: 30.minutes.ago, duration_sec: 600,
-                          avg_score: 60, status: :interrupted, ended_reason: "timeout")
+    # 相対時刻が日付境界（UTC 0〜2時台）をまたいで前日扱いにならないよう、当日正午に固定する
+    travel_to Time.current.change(hour: 12) do
+      task = Task.create!(name: "コーディング")
+      task.sessions.create!(started_at: 2.hours.ago, ended_at: 1.hour.ago, duration_sec: 1800,
+                            avg_score: 80, status: :completed)
+      task.sessions.create!(started_at: 1.hour.ago, ended_at: 30.minutes.ago, duration_sec: 600,
+                            avg_score: 60, status: :interrupted, ended_reason: "timeout")
 
-    get tasks_url
+      get tasks_url
 
-    assert_select ".daily-status-bar" do
-      # 作業時間 1800+600 秒 = 0:40:00
-      assert_select "[data-measure-target='dailyDuration']", "0:40:00"
-      # 集中度総量 80*30 + 60*10 = 3000 → 3k
-      assert_select "[data-measure-target='dailyFocusVolume']", "3k"
-      # 平均 (80+60)/2 = 70
-      assert_select "[data-measure-target='dailyAverage']", "70"
+      assert_select ".daily-status-bar" do
+        # 作業時間 1800+600 秒 = 0:40:00
+        assert_select "[data-measure-target='dailyDuration']", "0:40:00"
+        # 集中度総量 80*30 + 60*10 = 3000 → 3k
+        assert_select "[data-measure-target='dailyFocusVolume']", "3k"
+        # 平均 (80+60)/2 = 70
+        assert_select "[data-measure-target='dailyAverage']", "70"
+      end
     end
   end
 
